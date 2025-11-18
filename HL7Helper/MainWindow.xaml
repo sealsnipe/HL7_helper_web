@@ -1,0 +1,157 @@
+<Window x:Class="MARIS_HL7_Helper.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MARIS_HL7_Helper"
+        xmlns:vm="clr-namespace:HL7Helper.ViewModels"
+        mc:Ignorable="d"
+        Title="MARIS HL7 Helper" Height="600" Width="800">
+    <!-- DataContext wird im Code-Behind gesetzt -->
+    <Window.Resources>
+        <!-- Ref: HL7H-26 -->
+        <local:BooleanToInverseBooleanConverter x:Key="BoolToInverseBoolConverter"/>
+        <!-- Ref: HL7H-28 Converter für Sichtbarkeit (hierher verschoben für globalen Zugriff) -->
+        <local:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter"/>
+    </Window.Resources>
+
+    <DockPanel Margin="5">
+        <!-- Oberer Bereich: Button und Status -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,5">
+            <Button Content="Datei öffnen" Margin="5" Padding="5"
+                    Command="{Binding OpenFileCommand}"/> <!-- Ref: HL7H-17 - Binding angepasst (ViewModel-Präfix entfernt, da DataContext direkt gesetzt wird) -->
+            <!-- Ref: HL7H-17 - Button zum manuellen Parsen hinzugefügt -->
+            <Button Content="Nachricht parsen" Margin="5" Padding="5"
+                    Command="{Binding ParseMessageCommand}"/>
+            <!-- Ref: HL7H-18 Update Button -->
+            <Button Content="Aktualisierte Nachricht anzeigen" Margin="5" Padding="5"
+                    Command="{Binding UpdateRawMessageCommand}"/>
+
+            <!-- Ref: HL7H-17 - Binding angepasst -->
+            <TextBlock Text="{Binding ValidationStatusText}"
+                       Margin="10,5" VerticalAlignment="Center"/>
+       </StackPanel>
+
+       <!-- Ref: HL7H-12 Start: Template Management Section -->
+       <GroupBox Header="Templates" DockPanel.Dock="Top" Margin="5,0,5,5">
+           <StackPanel Orientation="Vertical">
+               <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                   <TextBlock Text="Verfügbare Templates:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                   <ComboBox ItemsSource="{Binding AvailableTemplates}"
+                             SelectedItem="{Binding SelectedTemplate}"
+                             DisplayMemberPath="Name"
+                             MinWidth="150" Margin="0,0,5,0"/>
+                   <Button Content="Neu laden" Margin="5,0,0,0" Padding="5,2"
+                           Command="{Binding LoadTemplatesCommand}"/>
+               </StackPanel>
+                <!-- Ref: HL7H-20 -->
+                <Button Content="Neue Nachricht aus Template erstellen" Margin="0,5,0,0" Padding="5,2" HorizontalAlignment="Left"
+                        Command="{Binding NewMessageFromTemplateCommand}"/>
+               <Button Content="Aktuelle Struktur als Template speichern" Margin="0,0,0,0" Padding="5,2" HorizontalAlignment="Left"
+                       Command="{Binding SaveTemplateCommand}"/>
+               <!-- Optional: Buttons zum Laden/Speichern einzelner Template-Dateien -->
+               <!--
+               <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <Button Content="Template aus Datei laden..." Margin="0,0,5,0" Padding="5,2"
+                           Command="{Binding LoadTemplateFromFileCommand}"/>
+                    <Button Content="Ausgewähltes Template speichern unter..." Margin="0,0,0,0" Padding="5,2"
+                           Command="{Binding SaveTemplateToFileCommand}"/>
+               </StackPanel>
+               -->
+           </StackPanel>
+       </GroupBox>
+       <!-- Ref: HL7H-12 End -->
+
+        <!-- Unterer Bereich: Fehlermeldungen (optional) -->
+        <ListView DockPanel.Dock="Bottom" Margin="5"
+                  ItemsSource="{Binding ValidationMessages}"> <!-- Ref: HL7H-17 - Binding angepasst -->
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding .}" Foreground="Red"/>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Mittlerer Bereich: TextBox und TreeView -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Container für TextBox, Fehlerliste und Ergebnis in der ersten Spalte -->
+            <DockPanel Grid.Column="0" LastChildFill="True">
+
+                <!-- Ref: HL7H-11 Start: Anzeige des Validierungsergebnisses (nach unten gedockt) -->
+                <TextBlock DockPanel.Dock="Bottom" Margin="5,0,5,5"
+                           Text="{Binding ValidationResult, Mode=OneWay}"
+                           TextWrapping="Wrap" />
+                <!-- Ref: HL7H-11 End -->
+
+                <!-- Ref: HL7H-28 Start: ListBox zur Anzeige der Validierungsfehler (nach unten gedockt, über dem Ergebnis) -->
+                <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding ValidationErrors}" MaxHeight="150" Margin="5,5,5,0" HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Ref: HL7H-19 & HL7H-31 Error Display Improvement -->
+                            <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="Bold" Margin="0,0,5,0">
+                                        <Run Text="{Binding Severity, Mode=OneWay}"/>:
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding ErrorMessage, Mode=OneWay}" TextWrapping="Wrap"/>
+                                    <TextBlock Margin="5,0,0,0" Foreground="DarkGray" Visibility="{Binding FieldPath, Converter={StaticResource NullOrEmptyToVisibilityConverter}}">
+                                        <Run Text="("/>
+                                        <Run Text="{Binding FieldPath, Mode=OneWay}"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <!-- Optional: Style für unterschiedliche Severity -->
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Severity}" Value="Error">
+                                    <Setter Property="Foreground" Value="Red"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                    <Setter Property="Foreground" Value="Orange"/>
+                                </DataTrigger>
+                                <!-- Andere Severities könnten hier hinzugefügt werden -->
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+                <!-- Ref: HL7H-28 End -->
+
+                <!-- Ref: HL7H-17 - TextBox für die Eingabe/Anzeige der HL7-Nachricht (füllt den Rest) -->
+                <TextBox Margin="5" Padding="5"
+                         Text="{Binding Hl7MessageText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" VerticalScrollBarVisibility="Auto" IsReadOnly="False"
+                         />
+
+            </DockPanel>
+
+            <!-- Ref: HL7H-17 - TreeView zur Anzeige der geparsten Segmente und Felder -->
+            <TreeView Margin="5" ItemsSource="{Binding Segments}" Grid.Column="1">
+                <TreeView.Resources>
+                    <HierarchicalDataTemplate DataType="{x:Type vm:SegmentViewModel}" ItemsSource="{Binding Fields}">
+                        <TextBlock Text="{Binding SegmentName}" FontWeight="Bold"/>
+                    </HierarchicalDataTemplate>
+                    <!-- Ref: HL7H-17 - DataTemplate für Felder angepasst -->
+                    <!-- Ref: HL7H-18 -->
+                    <DataTemplate DataType="{x:Type vm:FieldViewModel}">
+                        <!-- Ref: HL7H-26 - Bind IsReadOnly to IsEditable using converter -->
+                        <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="{Binding Position}"
+                                 IsReadOnly="{Binding IsEditable, Converter={StaticResource BoolToInverseBoolConverter}, Mode=OneWay}"
+                                 MinWidth="50"/> <!-- MinWidth hinzugefügt für bessere Klickbarkeit -->
+                    </DataTemplate>
+
+                    <!-- Converter wird jetzt in Window.Resources definiert -->
+                </TreeView.Resources>
+            </TreeView>
+        </Grid>
+    </DockPanel>
+</Window>

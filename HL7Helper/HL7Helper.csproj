@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType> <!-- Zurück zu WinExe geändert, um eine ausführbare WPF-App zu erstellen -->
+    <TargetFramework>net8.0-windows</TargetFramework> <!-- TargetFramework für WPF angepasst -->
+    <UseWPF>true</UseWPF> <!-- WPF aktiviert -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NHapi" Version="3.2.4" />
+    <PackageReference Include="NHapiTools" Version="2.0.4" />
+  </ItemGroup>
+
+  <!-- Removed explicit include for MainWindow files, relying on SDK default includes -->
+
+</Project>
