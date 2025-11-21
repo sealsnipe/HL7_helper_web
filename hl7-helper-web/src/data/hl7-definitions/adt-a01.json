@@ -1,0 +1,1413 @@
+{
+  "messageType": "ADT^A01",
+  "description": "Admit/Visit Notification",
+  "segments": {
+    "MSH": {
+      "description": "Message Header",
+      "fields": {
+        "1": {
+          "description": "Field Separator"
+        },
+        "2": {
+          "description": "Encoding Characters"
+        },
+        "3": {
+          "description": "Sending Application",
+          "components": {
+            "1": "Namespace ID",
+            "2": "Universal ID",
+            "3": "Universal ID Type"
+          }
+        },
+        "4": {
+          "description": "Sending Facility",
+          "components": {
+            "1": "Namespace ID",
+            "2": "Universal ID",
+            "3": "Universal ID Type"
+          }
+        },
+        "5": {
+          "description": "Receiving Application",
+          "components": {
+            "1": "Namespace ID",
+            "2": "Universal ID",
+            "3": "Universal ID Type"
+          }
+        },
+        "6": {
+          "description": "Receiving Facility",
+          "components": {
+            "1": "Namespace ID",
+            "2": "Universal ID",
+            "3": "Universal ID Type"
+          }
+        },
+        "7": {
+          "description": "Date/Time of Message"
+        },
+        "8": {
+          "description": "Security"
+        },
+        "9": {
+          "description": "Message Type",
+          "components": {
+            "1": "Message Type",
+            "2": "Trigger Event",
+            "3": "Message Structure"
+          }
+        },
+        "10": {
+          "description": "Message Control ID"
+        },
+        "11": {
+          "description": "Processing ID",
+          "components": {
+            "1": "Processing ID",
+            "2": "Processing Mode"
+          }
+        },
+        "12": {
+          "description": "Version ID"
+        },
+        "13": {
+          "description": "Sequence Number"
+        },
+        "14": {
+          "description": "Continuation Pointer"
+        },
+        "15": {
+          "description": "Accept Acknowledgment Type"
+        },
+        "16": {
+          "description": "Application Acknowledgment Type"
+        },
+        "17": {
+          "description": "Country Code"
+        },
+        "18": {
+          "description": "Character Set"
+        },
+        "19": {
+          "description": "Principal Language of Message",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        }
+      }
+    },
+    "EVN": {
+      "description": "Event Type",
+      "fields": {
+        "1": {
+          "description": "Event Type Code"
+        },
+        "2": {
+          "description": "Recorded Date/Time"
+        },
+        "3": {
+          "description": "Date/Time Planned Event"
+        },
+        "4": {
+          "description": "Event Reason Code"
+        },
+        "5": {
+          "description": "Operator ID",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        },
+        "6": {
+          "description": "Event Occurred"
+        }
+      }
+    },
+    "PID": {
+      "description": "Patient Identification",
+      "fields": {
+        "1": {
+          "description": "Set ID - PID"
+        },
+        "2": {
+          "description": "Patient ID (deprecated)"
+        },
+        "3": {
+          "description": "Patient Identifier List",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "4": {
+          "description": "Alternate Patient ID - PID (deprecated)"
+        },
+        "5": {
+          "description": "Patient Name",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "6": {
+          "description": "Mother's Maiden Name",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "7": {
+          "description": "Date/Time of Birth"
+        },
+        "8": {
+          "description": "Administrative Sex"
+        },
+        "9": {
+          "description": "Patient Alias",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "10": {
+          "description": "Race",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "11": {
+          "description": "Patient Address",
+          "components": {
+            "1": "Street Address",
+            "2": "Other Designation",
+            "3": "City",
+            "4": "State or Province",
+            "5": "Zip or Postal Code",
+            "6": "Country",
+            "7": "Address Type",
+            "8": "Other Geographic Designation",
+            "9": "County/Parish Code",
+            "10": "Census Tract",
+            "11": "Address Representation Code",
+            "12": "Address Validity Range",
+            "13": "Effective Date",
+            "14": "Expiration Date"
+          }
+        },
+        "12": {
+          "description": "County Code"
+        },
+        "13": {
+          "description": "Phone Number - Home",
+          "components": {
+            "1": "Telephone Number",
+            "2": "Telecommunication Use Code",
+            "3": "Telecommunication Equipment Type",
+            "4": "Email Address",
+            "5": "Country Code",
+            "6": "Area/City Code",
+            "7": "Phone Number",
+            "8": "Extension",
+            "9": "Any Text"
+          }
+        },
+        "14": {
+          "description": "Phone Number - Business",
+          "components": {
+            "1": "Telephone Number",
+            "2": "Telecommunication Use Code",
+            "3": "Telecommunication Equipment Type",
+            "4": "Email Address",
+            "5": "Country Code",
+            "6": "Area/City Code",
+            "7": "Phone Number",
+            "8": "Extension",
+            "9": "Any Text"
+          }
+        },
+        "15": {
+          "description": "Primary Language",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "16": {
+          "description": "Marital Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "17": {
+          "description": "Religion",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "18": {
+          "description": "Patient Account Number",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "19": {
+          "description": "SSN Number - Patient"
+        },
+        "20": {
+          "description": "Driver's License Number - Patient",
+          "components": {
+            "1": "License Number",
+            "2": "Issuing State, Province, Country",
+            "3": "Expiration Date"
+          }
+        },
+        "21": {
+          "description": "Mother's Identifier",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "22": {
+          "description": "Ethnic Group",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "23": {
+          "description": "Birth Place"
+        },
+        "24": {
+          "description": "Multiple Birth Indicator"
+        },
+        "25": {
+          "description": "Birth Order"
+        },
+        "26": {
+          "description": "Citizenship",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "27": {
+          "description": "Veterans Military Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "28": {
+          "description": "Nationality",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "29": {
+          "description": "Patient Death Date and Time"
+        },
+        "30": {
+          "description": "Patient Death Indicator"
+        }
+      }
+    },
+    "NK1": {
+      "description": "Next of Kin / Associated Parties",
+      "fields": {
+        "1": {
+          "description": "Set ID - NK1"
+        },
+        "2": {
+          "description": "Name",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "3": {
+          "description": "Relationship",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "4": {
+          "description": "Address",
+          "components": {
+            "1": "Street Address",
+            "2": "Other Designation",
+            "3": "City",
+            "4": "State or Province",
+            "5": "Zip or Postal Code",
+            "6": "Country",
+            "7": "Address Type",
+            "8": "Other Geographic Designation",
+            "9": "County/Parish Code",
+            "10": "Census Tract",
+            "11": "Address Representation Code",
+            "12": "Address Validity Range",
+            "13": "Effective Date",
+            "14": "Expiration Date"
+          }
+        },
+        "5": {
+          "description": "Phone Number",
+          "components": {
+            "1": "Telephone Number",
+            "2": "Telecommunication Use Code",
+            "3": "Telecommunication Equipment Type",
+            "4": "Email Address",
+            "5": "Country Code",
+            "6": "Area/City Code",
+            "7": "Phone Number",
+            "8": "Extension",
+            "9": "Any Text"
+          }
+        },
+        "6": {
+          "description": "Business Phone Number",
+          "components": {
+            "1": "Telephone Number",
+            "2": "Telecommunication Use Code",
+            "3": "Telecommunication Equipment Type",
+            "4": "Email Address",
+            "5": "Country Code",
+            "6": "Area/City Code",
+            "7": "Phone Number",
+            "8": "Extension",
+            "9": "Any Text"
+          }
+        },
+        "7": {
+          "description": "Contact Role",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "8": {
+          "description": "Start Date"
+        },
+        "9": {
+          "description": "End Date"
+        },
+        "10": {
+          "description": "Next of Kin / Associated Parties Job Title"
+        },
+        "11": {
+          "description": "Next of Kin / Associated Parties Job Code/Class",
+          "components": {
+            "1": "Job Code",
+            "2": "Job Class",
+            "3": "Job Description Text"
+          }
+        },
+        "12": {
+          "description": "Next of Kin / Associated Parties Employee Number",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "13": {
+          "description": "Organization Name - NK1"
+        },
+        "14": {
+          "description": "Marital Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "15": {
+          "description": "Administrative Sex",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "16": {
+          "description": "Date/Time of Birth"
+        },
+        "17": {
+          "description": "Living Dependency",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "18": {
+          "description": "Ambulatory Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "19": {
+          "description": "Citizenship",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "20": {
+          "description": "Primary Language",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "21": {
+          "description": "Living Arrangement",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "22": {
+          "description": "Publicity Code",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "23": {
+          "description": "Protection Indicator"
+        },
+        "24": {
+          "description": "Student Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "25": {
+          "description": "Religion",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "26": {
+          "description": "Mother's Maiden Name",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "27": {
+          "description": "Nationality",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "28": {
+          "description": "Ethnic Group",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "29": {
+          "description": "Contact Reason",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "30": {
+          "description": "Contact Person's Name",
+          "components": {
+            "1": "Family Name",
+            "2": "Given Name",
+            "3": "Middle Initial or Name",
+            "4": "Suffix",
+            "5": "Prefix",
+            "6": "Degree",
+            "7": "Name Type Code",
+            "8": "Name Representation Code",
+            "9": "Name Context",
+            "10": "Name Validity Range",
+            "11": "Name Assembly Order"
+          }
+        },
+        "31": {
+          "description": "Contact Person's Telephone Number",
+          "components": {
+            "1": "Telephone Number",
+            "2": "Telecommunication Use Code",
+            "3": "Telecommunication Equipment Type",
+            "4": "Email Address",
+            "5": "Country Code",
+            "6": "Area/City Code",
+            "7": "Phone Number",
+            "8": "Extension",
+            "9": "Any Text"
+          }
+        },
+        "32": {
+          "description": "Contact Person's Address",
+          "components": {
+            "1": "Street Address",
+            "2": "Other Designation",
+            "3": "City",
+            "4": "State or Province",
+            "5": "Zip or Postal Code",
+            "6": "Country",
+            "7": "Address Type",
+            "8": "Other Geographic Designation",
+            "9": "County/Parish Code",
+            "10": "Census Tract",
+            "11": "Address Representation Code",
+            "12": "Address Validity Range",
+            "13": "Effective Date",
+            "14": "Expiration Date"
+          }
+        },
+        "33": {
+          "description": "Next of Kin / Associated Parties Identifiers",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "34": {
+          "description": "Job Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "35": {
+          "description": "Race",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "36": {
+          "description": "Handicap",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "37": {
+          "description": "Contact Person Social Security Number"
+        },
+        "38": {
+          "description": "Next of Kin Birth Place"
+        },
+        "39": {
+          "description": "VIP Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        }
+      }
+    },
+    "PV1": {
+      "description": "Patient Visit",
+      "fields": {
+        "1": {
+          "description": "Set ID - PV1"
+        },
+        "2": {
+          "description": "Patient Class"
+        },
+        "3": {
+          "description": "Assigned Patient Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "4": {
+          "description": "Admission Type",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "5": {
+          "description": "Preadmit Number",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "6": {
+          "description": "Prior Patient Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "7": {
+          "description": "Attending Doctor",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        },
+        "8": {
+          "description": "Referring Doctor",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        },
+        "9": {
+          "description": "Consulting Doctor",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        },
+        "10": {
+          "description": "Hospital Service",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "11": {
+          "description": "Temporary Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "12": {
+          "description": "Preadmit Test Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "13": {
+          "description": "Re-admission Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "14": {
+          "description": "Admit Source",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "15": {
+          "description": "Ambulatory Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "16": {
+          "description": "VIP Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "17": {
+          "description": "Admitting Doctor",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        },
+        "18": {
+          "description": "Patient Type",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "19": {
+          "description": "Visit Number (Case Number)",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "20": {
+          "description": "Financial Class",
+          "components": {
+            "1": "Financial Class Code",
+            "2": "Effective Date"
+          }
+        },
+        "21": {
+          "description": "Charge Price Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "22": {
+          "description": "Courtesy Code",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "23": {
+          "description": "Credit Rating",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "24": {
+          "description": "Contract Code",
+          "components": {
+            "1": "Contract Number",
+            "2": "Contract Name",
+            "3": "Contract Description",
+            "4": "Contract Effective Date",
+            "5": "Contract Expiration Date"
+          }
+        },
+        "25": {
+          "description": "Contract Effective Date"
+        },
+        "26": {
+          "description": "Contract Amount"
+        },
+        "27": {
+          "description": "Contract Period"
+        },
+        "28": {
+          "description": "Interest Code",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "29": {
+          "description": "Transfer to Bad Debt Code",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "30": {
+          "description": "Transfer to Bad Debt Date"
+        },
+        "31": {
+          "description": "Bad Debt Agency Code",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "32": {
+          "description": "Bad Debt Transfer Amount"
+        },
+        "33": {
+          "description": "Bad Debt Recovery Amount"
+        },
+        "34": {
+          "description": "Delete Account Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "35": {
+          "description": "Delete Account Date"
+        },
+        "36": {
+          "description": "Discharge Disposition",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "37": {
+          "description": "Discharged to Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "38": {
+          "description": "Diet Type",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "39": {
+          "description": "Servicing Facility",
+          "components": {
+            "1": "Namespace ID",
+            "2": "Universal ID",
+            "3": "Universal ID Type"
+          }
+        },
+        "40": {
+          "description": "Bed Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "41": {
+          "description": "Account Status",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "42": {
+          "description": "Pending Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "43": {
+          "description": "Prior Temporary Location",
+          "components": {
+            "1": "Point of Care",
+            "2": "Room",
+            "3": "Bed",
+            "4": "Facility",
+            "5": "Location Status",
+            "6": "Person Location Type",
+            "7": "Building",
+            "8": "Floor",
+            "9": "Location Description",
+            "10": "Comprehensive Location Identifier",
+            "11": "Assigning Authority for Location"
+          }
+        },
+        "44": {
+          "description": "Admit Date/Time"
+        },
+        "45": {
+          "description": "Discharge Date/Time"
+        },
+        "46": {
+          "description": "Current Patient Balance"
+        },
+        "47": {
+          "description": "Total Charges"
+        },
+        "48": {
+          "description": "Total Adjustments"
+        },
+        "49": {
+          "description": "Total Payments"
+        },
+        "50": {
+          "description": "Alternate Visit ID",
+          "components": {
+            "1": "ID Number",
+            "2": "Check Digit",
+            "3": "Check Digit Scheme",
+            "4": "Assigning Authority",
+            "5": "Identifier Type Code",
+            "6": "Assigning Facility",
+            "7": "Date/Time",
+            "8": "Expiration Date",
+            "9": "Assigning Jurisdiction",
+            "10": "Assigning Agency or Department"
+          }
+        },
+        "51": {
+          "description": "Visit Indicator",
+          "components": {
+            "1": "Identifier",
+            "2": "Text",
+            "3": "Name of Coding System",
+            "4": "Alternate Identifier",
+            "5": "Alternate Text",
+            "6": "Name of Alternate Coding System"
+          }
+        },
+        "52": {
+          "description": "Other Healthcare Provider",
+          "components": {
+            "1": "ID Number",
+            "2": "Family Name",
+            "3": "Given Name",
+            "4": "Middle Initial or Name",
+            "5": "Suffix",
+            "6": "Prefix",
+            "7": "Degree",
+            "8": "Source Table",
+            "9": "Assigning Authority",
+            "10": "Name Type Code",
+            "11": "Identifier Check Digit",
+            "12": "Check Digit Scheme",
+            "13": "Identifier Type Code",
+            "14": "Assigning Facility",
+            "15": "Name Representation Code",
+            "16": "Name Context",
+            "17": "Name Validity Range",
+            "18": "Name Assembly Order",
+            "19": "Effective Date",
+            "20": "Expiration Date",
+            "21": "Professional Suffix",
+            "22": "Assigning Jurisdiction",
+            "23": "Assigning Agency or Department"
+          }
+        }
+      }
+    }
+  }
+}

@@ -34,3 +34,33 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Deployment
+
+### Option 1: Vercel (Recommended)
+The easiest way to deploy is using [Vercel](https://vercel.com).
+1. Push your code to a GitHub repository.
+2. Import the project in Vercel.
+3. Vercel will automatically detect Next.js and configure the build settings.
+4. Click **Deploy**.
+
+### Option 2: Docker
+You can containerize the application using Docker.
+1. Build the image:
+   ```bash
+   docker build -t hl7-helper-web .
+   ```
+2. Run the container:
+   ```bash
+   docker run -p 3000:3000 hl7-helper-web
+   ```
+   *(Note: Ensure you have a `Dockerfile` in the root directory. If not, you can use the official Next.js Dockerfile example)*
+
+### Option 3: Static Export (if applicable)
+If you don't need server-side features, you can export as a static site:
+1. Update `next.config.ts` to include `output: 'export'`.
+2. Run:
+   ```bash
+   npm run build
+   ```
+3. The `out` directory will contain the static assets which can be hosted on any static hosting service (GitHub Pages, Netlify, AWS S3, etc.).

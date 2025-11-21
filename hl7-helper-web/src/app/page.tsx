@@ -3,152 +3,260 @@
 import React, { useState } from 'react';
 import { MessageEditor } from '@/components/MessageEditor';
 import { SegmentDto } from '@/types';
+import { NavigationHeader } from '@/components/NavigationHeader';
+
+import { parseHl7Message } from '@/utils/hl7Parser';
+import { generateHl7Message } from '@/utils/hl7Generator';
+import { SAMPLE_TEMPLATES } from '@/data/templates';
 
 export default function Home() {
   const [hl7Text, setHl7Text] = useState<string>('');
   const [segments, setSegments] = useState<SegmentDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showTemplateModal, setShowTemplateModal] = useState<boolean>(false);
 
-  // Assuming backend runs on localhost:5000 or similar. Adjust port if needed.
-  // In production, this would be an environment variable.
-  const API_BASE_URL = 'http://localhost:5125/api';
-
-  const handleParse = async () => {
+  const handleParse = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/parse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: hl7Text,
-      });
-
-      if (!response.ok) {
-        const msg = await response.text();
-        throw new Error(msg || 'Failed to parse message');
+      if (!hl7Text) {
+        throw new Error('Please enter an HL7 message');
       }
-
-      const data: SegmentDto[] = await response.json();
+      const data = parseHl7Message(hl7Text);
       setSegments(data);
     } catch (err: any) {
-      setError(err.message);
+      console.error("Parse error:", err);
+      setError(err.message || "Failed to parse message");
       setSegments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdate = async (updatedSegments: SegmentDto[]) => {
+  const handleUpdate = (updatedSegments: SegmentDto[]) => {
     setSegments(updatedSegments);
     // Optional: Auto-generate on change, or wait for button click
   };
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originalHl7: hl7Text,
-          segments: segments
-        }),
-      });
-
-      if (!response.ok) {
-        const msg = await response.text();
-        throw new Error(msg || 'Failed to generate message');
-      }
-
-      const data = await response.json();
-      setHl7Text(data.hl7);
+      const newHl7 = generateHl7Message(segments);
+      setHl7Text(newHl7);
     } catch (err: any) {
-      setError(err.message);
+      console.error("Generate error:", err);
+      setError(err.message || "Failed to generate message");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleNewMessage = () => {
+    if (confirm('Are you sure you want to clear the current message?')) {
+      setHl7Text('');
+      setSegments([]);
+      setError(null);
+    }
+  };
+
+  const handleLoadTemplate = (templateKey: string) => {
+    setHl7Text(SAMPLE_TEMPLATES[templateKey]);
+    setShowTemplateModal(false);
+    setSegments([]); // Clear previous segments until re-parsed
+    setError(null);
+  };
+
+  // Check for generated message from template system
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('loadGenerated') === 'true') {
+      const generated = localStorage.getItem('generated_hl7');
+      if (generated) {
+        setHl7Text(generated);
+        // Clean up URL
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  }, []);
+
   return (
-    <main className="min-h-screen bg-gray-100 p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="min-h-screen bg-background font-sans transition-colors relative text-foreground selection:bg-primary/20">
+      {/* Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-20 animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-20 animate-pulse delay-1000" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+      </div>
 
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">MARIS HL7 Helper</h1>
-            <p className="text-gray-500 mt-1">Web Edition</p>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all">
-              Load Template
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-200">
+          <div className="bg-card/90 backdrop-blur-md rounded-xl p-8 w-full max-w-md shadow-2xl border border-border/50 ring-1 ring-white/10">
+            <h3 className="text-2xl font-bold mb-6 text-card-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">
+              Select Example Message
+            </h3>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {Object.keys(SAMPLE_TEMPLATES).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => handleLoadTemplate(key)}
+                  className="w-full text-left px-5 py-4 hover:bg-primary/10 rounded-lg border border-border/50 hover:border-primary/50 text-card-foreground transition-all duration-200 group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="relative font-medium">{key}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowTemplateModal(false)}
+              className="mt-8 w-full px-4 py-3 bg-muted/50 text-muted-foreground rounded-lg hover:bg-muted hover:text-foreground transition-colors font-medium"
+            >
+              Cancel
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm transition-all">
-              New Message
-            </button>
           </div>
-        </header>
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-12">
+        <NavigationHeader
+          activePage="home"
+          onNewMessage={handleNewMessage}
+          onLoadExample={() => setShowTemplateModal(true)}
+        />
+
+        {/* Hero Section */}
+        <div className="text-center space-y-6 py-12 relative">
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium mb-4">
+            <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
+            v1.0 Now Available
+          </div>
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-muted-foreground">
+              HL7 Helper
+            </span>
+            <span className="text-primary">.</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            The modern, intelligent way to parse, edit, and generate HL7 messages.
+            Built for healthcare developers who demand <span className="text-foreground font-medium">speed</span> and <span className="text-foreground font-medium">precision</span>.
+          </p>
+        </div>
+
+        {/* Main Editor Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left Column: Input */}
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-gray-700">Raw HL7 Message</label>
-                <span className="text-xs text-gray-400">Paste your HL7 message here</span>
+          <div className="group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-500/30 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+            <div className="relative bg-card/80 backdrop-blur-xl p-6 rounded-xl shadow-xl border border-border/50 h-full flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-card-foreground">Raw HL7 Message</label>
+                    <span className="text-xs text-muted-foreground">Input your message string below</span>
+                  </div>
+                </div>
               </div>
+
               <textarea
-                className="w-full h-96 p-4 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="flex-1 w-full min-h-[400px] p-4 border border-input/50 rounded-lg font-mono text-sm bg-background/50 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all resize-none custom-scrollbar"
                 value={hl7Text}
                 onChange={(e) => setHl7Text(e.target.value)}
                 placeholder="MSH|^~\&|..."
+                spellCheck={false}
               />
-              <div className="mt-4 flex justify-end">
+
+              <div className="mt-6 flex justify-end">
                 <button
                   onClick={handleParse}
                   disabled={loading || !hl7Text}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
+                  className="relative overflow-hidden px-8 py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25 transition-all active:scale-95 group/btn"
                 >
-                  {loading ? 'Processing...' : 'Parse Message'}
+                  <span className="relative z-10 flex items-center gap-2">
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Parse Message
+                        <svg className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </>
+                    )}
+                  </span>
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-md shadow-sm">
-                <p className="font-bold">Error</p>
-                <p>{error}</p>
+              <div className="mt-4 p-4 bg-destructive/5 border border-destructive/20 text-destructive rounded-xl shadow-sm flex items-start gap-3">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="font-bold text-sm">Parsing Error</p>
+                  <p className="text-sm opacity-90">{error}</p>
+                </div>
               </div>
             )}
           </div>
 
           {/* Right Column: Editor */}
-          <div className="space-y-4">
-            {segments.length > 0 ? (
-              <>
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-800">Message Editor</h2>
-                  <button
-                    onClick={handleRegenerate}
-                    disabled={loading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 shadow-sm transition-all"
-                  >
-                    Update Raw Message
-                  </button>
+          <div className="group relative h-full">
+            <div className="absolute -inset-0.5 bg-gradient-to-l from-primary/30 to-purple-500/30 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+            <div className="relative bg-card/80 backdrop-blur-xl p-6 rounded-xl shadow-xl border border-border/50 h-full min-h-[500px]">
+              {segments.length > 0 ? (
+                <div className="h-full flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </div>
+                      <h2 className="text-lg font-bold text-foreground">Visual Editor</h2>
+                    </div>
+                    <button
+                      onClick={handleRegenerate}
+                      disabled={loading}
+                      className="px-4 py-2 bg-green-600/90 hover:bg-green-600 text-white rounded-lg font-medium shadow-lg shadow-green-600/20 transition-all active:scale-95 flex items-center gap-2 text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Update Raw
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <MessageEditor segments={segments} onUpdate={handleUpdate} />
+                  </div>
                 </div>
-                <MessageEditor segments={segments} onUpdate={handleUpdate} />
-              </>
-            ) : (
-              <div className="h-full flex items-center justify-center bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-gray-400">
-                <div className="text-center">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                  </svg>
-                  <p className="mt-2 text-sm font-medium">No message parsed yet</p>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-60">
+                  <div className="p-6 bg-muted/50 rounded-full">
+                    <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="text-center max-w-xs">
+                    <p className="text-lg font-medium text-foreground">No Message Loaded</p>
+                    <p className="text-sm mt-1">Paste a message on the left or load an example to start editing.</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

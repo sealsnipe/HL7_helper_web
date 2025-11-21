@@ -30,6 +30,9 @@ namespace HL7Helper.Api.Controllers
                     return BadRequest("Empty HL7 message.");
                 }
 
+                // Normalize line endings to \r (standard HL7 segment delimiter)
+                hl7Content = hl7Content.Replace("\r\n", "\r").Replace("\n", "\r");
+
                 var message = _parsingService.ParseMessage(hl7Content);
                 if (message == null)
                 {

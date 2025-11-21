@@ -5,6 +5,7 @@ namespace HL7Helper.Api.Models
         public int Position { get; set; }
         public string Value { get; set; } = string.Empty;
         public bool IsEditable { get; set; } = true;
+        public List<ComponentDto> Components { get; set; } = new List<ComponentDto>();
 
         public FieldDto() { }
 

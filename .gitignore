@@ -39,3 +39,9 @@ yarn-error.log*
 # HL7 Helper Specific
 templates/
 *.hl7
+
+# Logs and Temporary Files
+debug_log.txt
+*.log
+screenshot_*.png
+api_response*.json
