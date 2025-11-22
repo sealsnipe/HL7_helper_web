@@ -22,11 +22,7 @@ A modern web-based interface for parsing, editing, and generating HL7 messages.
 ### Deployment
 The web application is built with Next.js.
 - **Source**: `./hl7-helper-web`
-- **Deploy**: Recommended on [Vercel](https://vercel.com).
-- **Docker**:
-  ```bash
-  cd hl7-helper-web
-  docker build -t hl7-helper-web .
-  docker run -p 3000:3000 hl7-helper-web
-  ```
-See [hl7-helper-web/README.md](./hl7-helper-web/README.md) for more details.
+- **Standard**: `npm run build` then `npm run start`
+- **Docker**: Available (see details below)
+
+See [hl7-helper-web/README.md](./hl7-helper-web/README.md) for full deployment instructions including PM2 and Static Export.

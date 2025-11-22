@@ -37,12 +37,29 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Deployment
 
-### Option 1: Vercel (Recommended)
-The easiest way to deploy is using [Vercel](https://vercel.com).
-1. Push your code to a GitHub repository.
-2. Import the project in Vercel.
-3. Vercel will automatically detect Next.js and configure the build settings.
-4. Click **Deploy**.
+### Option 1: Standard Node.js Server (Recommended)
+For a standard deployment on a server (e.g., Ubuntu, Windows Server):
+
+1. **Build the application**:
+   ```bash
+   npm run build
+   ```
+
+2. **Start the production server**:
+   ```bash
+   npm run start
+   ```
+   The application will be available at `http://localhost:3000`.
+
+   **Using PM2 (Process Manager)**
+   To keep the application running in the background and restart on failure:
+   ```bash
+   # Install PM2 globally
+   npm install -g pm2
+   
+   # Start the app
+   pm2 start npm --name "hl7-helper-web" -- start
+   ```
 
 ### Option 2: Docker
 You can containerize the application using Docker.
@@ -54,13 +71,12 @@ You can containerize the application using Docker.
    ```bash
    docker run -p 3000:3000 hl7-helper-web
    ```
-   *(Note: Ensure you have a `Dockerfile` in the root directory. If not, you can use the official Next.js Dockerfile example)*
 
-### Option 3: Static Export (if applicable)
+### Option 3: Static Export
 If you don't need server-side features, you can export as a static site:
 1. Update `next.config.ts` to include `output: 'export'`.
 2. Run:
    ```bash
    npm run build
    ```
-3. The `out` directory will contain the static assets which can be hosted on any static hosting service (GitHub Pages, Netlify, AWS S3, etc.).
+3. The `out` directory will contain the static assets which can be hosted on any static hosting service (Apache, Nginx, IIS, etc.).
