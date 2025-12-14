@@ -81,6 +81,7 @@ const parseComponent = (value: string, position: number): ComponentDto => {
         const subComponents = value.split('&').map((subVal, idx) => ({
             position: idx + 1,
             value: subVal,
+            subComponents: [], // SubComponents are ComponentDto[], so they need this property
         }));
         return {
             position,

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FieldDto, ComponentDto, FieldDefinition } from '@/types';
+import { FieldDto, FieldDefinition } from '@/types';
 
 interface Props {
     field: FieldDto;

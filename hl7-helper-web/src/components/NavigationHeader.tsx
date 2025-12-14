@@ -17,9 +17,8 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
 }) => {
     const isHome = activePage === 'home';
 
-    // Helper to handle "New Message" click
-    // If onHome and callback provided, call it. Else link to home.
-    const NewMessageButton = () => {
+    // Render "New Message" button or link
+    const renderNewMessageButton = () => {
         if (isHome && onNewMessage) {
             return (
                 <button
@@ -40,8 +39,8 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         );
     };
 
-    // Helper to handle "Load Example" click
-    const LoadExampleButton = () => {
+    // Render "Load Example" button or link
+    const renderLoadExampleButton = () => {
         if (isHome && onLoadExample) {
             return (
                 <button
@@ -95,8 +94,8 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
                     Serialize from Template
                 </Link>
 
-                <LoadExampleButton />
-                <NewMessageButton />
+                {renderLoadExampleButton()}
+                {renderNewMessageButton()}
             </div>
         </header>
     );

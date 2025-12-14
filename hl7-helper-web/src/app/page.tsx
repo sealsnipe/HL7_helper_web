@@ -25,9 +25,9 @@ export default function Home() {
       }
       const data = parseHl7Message(hl7Text);
       setSegments(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Parse error:", err);
-      setError(err.message || "Failed to parse message");
+      setError(err instanceof Error ? err.message : "Failed to parse message");
       setSegments([]);
     } finally {
       setLoading(false);
@@ -45,9 +45,9 @@ export default function Home() {
     try {
       const newHl7 = generateHl7Message(segments);
       setHl7Text(newHl7);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Generate error:", err);
-      setError(err.message || "Failed to generate message");
+      setError(err instanceof Error ? err.message : "Failed to generate message");
     } finally {
       setLoading(false);
     }

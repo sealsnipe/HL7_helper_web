@@ -15,6 +15,7 @@ export const MessageEditor: React.FC<Props> = ({ segments, onUpdate }) => {
     // Initialize all expanded when segments change
     React.useEffect(() => {
         setExpandedIndices(new Set(segments.map((_, i) => i)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [segments.length]); // Only reset if segment count changes (new parse)
 
     // Determine message type
