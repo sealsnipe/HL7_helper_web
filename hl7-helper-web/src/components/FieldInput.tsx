@@ -11,31 +11,38 @@ interface Props {
 export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
-    // Helper to render a single input
-    const renderInput = (label: string, value: string, isEditable: boolean, onChangeVal: (v: string) => void, key: string, description?: string) => (
-        <div key={key} className="flex flex-col mb-2 min-w-[120px] flex-1">
-            <div className="flex flex-col mb-0.5">
-                <label className="text-[10px] text-muted-foreground font-mono whitespace-nowrap overflow-hidden text-ellipsis" title={label}>
-                    {label}
-                </label>
-                {description && (
-                    <span className="text-[10px] text-primary font-medium truncate" title={description}>
-                        {description}
-                    </span>
-                )}
+    // Helper to render a single input with proper accessibility and test attributes
+    const renderInput = (label: string, value: string, isEditable: boolean, onChangeVal: (v: string) => void, key: string, description?: string) => {
+        const ariaLabel = description || `Field ${label}`;
+        const testId = `field-input-${key}`;
+
+        return (
+            <div key={key} className="flex flex-col mb-2 min-w-[120px] flex-1">
+                <div className="flex flex-col mb-0.5">
+                    <label className="text-[10px] text-muted-foreground font-mono whitespace-nowrap overflow-hidden text-ellipsis" title={label}>
+                        {label}
+                    </label>
+                    {description && (
+                        <span className="text-[10px] text-primary font-medium truncate" title={description}>
+                            {description}
+                        </span>
+                    )}
+                </div>
+                <input
+                    type="text"
+                    value={value}
+                    readOnly={!isEditable}
+                    onChange={(e) => onChangeVal(e.target.value)}
+                    aria-label={ariaLabel}
+                    data-testid={testId}
+                    className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${isEditable
+                        ? 'bg-background border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none text-foreground'
+                        : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
+                        }`}
+                />
             </div>
-            <input
-                type="text"
-                value={value}
-                readOnly={!isEditable}
-                onChange={(e) => onChangeVal(e.target.value)}
-                className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${isEditable
-                    ? 'bg-background border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none text-foreground'
-                    : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
-                    }`}
-            />
-        </div>
-    );
+        );
+    };
 
     // If field has repetitions, render them
     if (field.repetitions && field.repetitions.length > 0) {
@@ -73,11 +80,40 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                         value={repFullValue}
                                         readOnly={!field.isEditable}
                                         onChange={(e) => {
+                                            const newValue = e.target.value;
                                             const newReps = [...field.repetitions!];
-                                            newReps[repIdx] = { ...rep, value: e.target.value, components: [] };
-                                            const newValue = newReps.map(r => r.value).join('~');
-                                            onChange(newValue);
+
+                                            // Re-parse components if value contains ^
+                                            if (newValue.includes('^')) {
+                                                const components = newValue.split('^').map((compVal, idx) => {
+                                                    if (compVal.includes('&')) {
+                                                        const subComponents = compVal.split('&').map((subVal, subIdx) => ({
+                                                            position: subIdx + 1,
+                                                            value: subVal,
+                                                            subComponents: [],
+                                                        }));
+                                                        return {
+                                                            position: idx + 1,
+                                                            value: compVal,
+                                                            subComponents,
+                                                        };
+                                                    }
+                                                    return {
+                                                        position: idx + 1,
+                                                        value: compVal,
+                                                        subComponents: [],
+                                                    };
+                                                });
+                                                newReps[repIdx] = { ...rep, value: newValue, components };
+                                            } else {
+                                                newReps[repIdx] = { ...rep, value: newValue, components: [] };
+                                            }
+
+                                            const finalValue = newReps.map(r => r.value).join('~');
+                                            onChange(finalValue);
                                         }}
+                                        aria-label={`${definition?.description || `Field ${field.position}`} repetition ${repIdx + 1}`}
+                                        data-testid={`field-input-${field.position}-rep-${repIdx}`}
                                         className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${field.isEditable
                                             ? 'bg-background border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none text-foreground'
                                             : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
@@ -122,10 +158,14 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                 type="text"
                                 value={fullValue}
                                 readOnly={true} // Main value is read-only in this view, edit components instead
+                                aria-label={`${definition?.description || `Field ${field.position}`} (read-only, expand to edit components)`}
+                                data-testid={`field-input-${field.position}-composite`}
                                 className="border border-input rounded px-2 py-1 text-sm font-mono bg-muted text-muted-foreground w-full"
                             />
                             <button
                                 onClick={() => setIsExpanded(!isExpanded)}
+                                aria-label={isExpanded ? `Collapse field ${field.position}` : `Expand field ${field.position}`}
+                                data-testid={`field-expand-${field.position}`}
                                 className="p-1 hover:bg-muted rounded text-muted-foreground text-xs"
                                 title={isExpanded ? "Collapse" : "Expand"}
                             >

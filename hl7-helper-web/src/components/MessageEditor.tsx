@@ -67,7 +67,8 @@ export const MessageEditor: React.FC<Props> = ({ segments, onUpdate }) => {
                 ...seg,
                 fields: seg.fields.map((f, fIdx) => {
                     if (fIdx !== fieldIndex) return f;
-                    return { ...f, value };
+                    // Clear components and repetitions when value is directly edited to maintain single source of truth
+                    return { ...f, value, components: [], repetitions: [] };
                 })
             };
         });
@@ -98,7 +99,7 @@ export const MessageEditor: React.FC<Props> = ({ segments, onUpdate }) => {
             <div className="divide-y divide-border">
                 {segments.map((segment, index) => (
                     <SegmentRow
-                        key={index}
+                        key={segment.id}
                         segment={segment}
                         definition={getSegmentDefinition(definition, segment.name)}
                         isExpanded={expandedIndices.has(index)}

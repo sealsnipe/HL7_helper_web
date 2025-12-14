@@ -78,8 +78,8 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
                 <Link
                     href="/templates"
                     className={`px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-all ${activePage === 'templates'
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        ? 'bg-primary text-primary-foreground ring-2 ring-offset-2 ring-primary'
+                        : 'bg-card border border-border text-card-foreground hover:bg-muted'
                         }`}
                 >
                     Templates

@@ -24,7 +24,15 @@ export default function Home() {
         throw new Error('Please enter an HL7 message');
       }
       const data = parseHl7Message(hl7Text);
-      setSegments(data);
+      // Make fields editable except for MSH-1 and MSH-2
+      const editableSegments = data.map((seg) => ({
+        ...seg,
+        fields: seg.fields.map((f) => ({
+          ...f,
+          isEditable: !(seg.name === 'MSH' && (f.position === 1 || f.position === 2))
+        }))
+      }));
+      setSegments(editableSegments);
     } catch (err) {
       console.error("Parse error:", err);
       setError(err instanceof Error ? err.message : "Failed to parse message");
@@ -68,16 +76,44 @@ export default function Home() {
     setError(null);
   };
 
+  /**
+   * Validates that a string looks like valid HL7 content.
+   * HL7 messages should only contain printable ASCII characters and specific delimiters.
+   * This helps prevent XSS attacks from localStorage injection.
+   */
+  const isValidHl7Content = (content: string): boolean => {
+    if (!content || typeof content !== 'string') return false;
+
+    // HL7 messages must start with a valid segment name (3 uppercase letters/digits)
+    // Most commonly MSH for a complete message
+    if (!/^[A-Z][A-Z0-9]{2}\|/.test(content)) return false;
+
+    // HL7 should only contain printable ASCII (0x20-0x7E), CR (\r), LF (\n), and tab
+    // This prevents injection of HTML/script tags
+    const validHl7Pattern = /^[\x20-\x7E\r\n\t]*$/;
+    if (!validHl7Pattern.test(content)) return false;
+
+    // Reject content that looks like HTML/script injection
+    if (/<[a-zA-Z]|javascript:|data:/i.test(content)) return false;
+
+    return true;
+  };
+
   // Check for generated message from template system
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('loadGenerated') === 'true') {
       const generated = localStorage.getItem('generated_hl7');
-      if (generated) {
+      if (generated && isValidHl7Content(generated)) {
         setHl7Text(generated);
-        // Clean up URL
-        window.history.replaceState({}, '', '/');
+        // Clean up localStorage after successful load
+        localStorage.removeItem('generated_hl7');
+      } else if (generated) {
+        console.warn('Invalid HL7 content detected in localStorage, ignoring');
+        localStorage.removeItem('generated_hl7');
       }
+      // Clean up URL
+      window.history.replaceState({}, '', '/');
     }
   }, []);
 
@@ -87,7 +123,6 @@ export default function Home() {
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-20 animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-20 animate-pulse delay-1000" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
       </div>
 
       {/* Template Selection Modal */}

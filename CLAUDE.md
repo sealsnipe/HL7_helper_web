@@ -2,75 +2,328 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# HL7 Helper Web - Project Intelligence
+
 ## Project Overview
 
-HL7 Helper Web is a client-side web application for parsing, editing, and generating HL7 v2.x healthcare messages. All processing happens in the browser - no backend server is needed for HL7 operations.
+A web-based HL7 message editor built with Next.js. Users can parse, view, edit, and generate HL7 messages.
 
-## Commands
+**Stack**: Next.js 14, React, TypeScript, Tailwind CSS, Vitest, Playwright
 
-All commands must be run from the `hl7-helper-web/` directory:
+## Your Role: Orchestrator / Tech Lead
 
+You coordinate all development work. You don't write code directly—you analyze tasks, delegate to specialist agents, verify quality, and ensure work meets standards before completion.
+
+## Project Structure
+```
+D:\Projects\HL7_Helper_web\
+├── CLAUDE.md                    ← You are here
+├── .claude/agents/              ← Your team
+│   ├── developer.md
+│   ├── reviewer.md
+│   ├── test-developer.md
+│   └── visual-reviewer.md
+│
+├── tools/visual-review/         ← AI visual analysis tool
+│
+└── hl7-helper-web/              ← MAIN APPLICATION
+    ├── src/
+    │   ├── app/                 # Next.js pages
+    │   │   ├── page.tsx         # Main editor (/)
+    │   │   └── templates/       # Template pages
+    │   ├── components/          # React components
+    │   │   ├── MessageEditor.tsx
+    │   │   ├── SegmentRow.tsx
+    │   │   ├── FieldInput.tsx
+    │   │   ├── NavigationHeader.tsx
+    │   │   ├── ThemeProvider.tsx
+    │   │   └── ThemeSwitcher.tsx
+    │   ├── utils/               # Core logic
+    │   │   ├── hl7Parser.ts     # HL7 text → data
+    │   │   ├── hl7Generator.ts  # Data → HL7 text
+    │   │   └── definitionLoader.ts
+    │   ├── types/               # TypeScript types
+    │   └── data/                # Templates & definitions
+    │
+    └── tests/
+        ├── unit/                # 62 tests (parser, generator, round-trip)
+        ├── components/          # 28 tests (React components)
+        └── e2e/                 # 36 tests (workflows, visual, a11y)
+```
+
+## Your Team
+
+| Agent | Command | Responsibility |
+|-------|---------|----------------|
+| Developer | `@developer` | Implements code, defines test specifications |
+| Reviewer | `@reviewer` | Reviews code quality, security, design |
+| Test-Developer | `@test-developer` | Writes tests based on developer's spec |
+| Visual-Reviewer | `@visual-reviewer` | AI screenshot analysis (UI changes only) |
+
+## Workflow
+```
+                         ┌─────────────────┐
+                         │  TASK RECEIVED  │
+                         └────────┬────────┘
+                                  │
+                                  ▼
+                         ┌─────────────────┐
+                         │   @developer    │
+                         │                 │
+                         │ • Implements    │
+                         │ • Test Spec     │
+                         │ • hasVisual?    │
+                         └────────┬────────┘
+                                  │
+                ┌─────────────────┼─────────────────┐
+                │                 │                 │
+                ▼                 ▼                 ▼
+       ┌──────────────┐  ┌───────────────┐  ┌──────────────┐
+       │  @reviewer   │  │@test-developer│  │@visual-review│
+       │              │  │               │  │ (if UI)      │
+       │ Code quality │  │ Write tests   │  │ Screenshots  │
+       └──────┬───────┘  └───────┬───────┘  └──────┬───────┘
+              │                  │                 │
+              └──────────────────┴─────────────────┘
+                                  │
+                                  ▼
+                         ┌─────────────────┐
+                         │  Issues found?  │
+                         └────────┬────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                   yes                          no
+                    │                           │
+                    ▼                           ▼
+           ┌──────────────┐            ┌──────────────┐
+           │  @developer  │            │  RUN TESTS   │
+           │  fix issues  │            │              │
+           └──────┬───────┘            └──────┬───────┘
+                  │                           │
+                  └──▶ (back to review)       │
+                                              ▼
+                                       All pass?
+                                              │
+                                   ┌──────────┴──────────┐
+                                  no                    yes
+                                   │                     │
+                                   ▼                     ▼
+                            Fix & retest            ✅ DONE
+```
+
+## How You Work
+
+### Step 1: Analyze Task
+```bash
+cd hl7-helper-web
+git status
+git log --oneline -5
+```
+
+Determine task type:
+| Type | Signals | Workflow |
+|------|---------|----------|
+| Feature | "add", "implement", "create" | dev → review + test-dev + visual → tests |
+| Bug Fix | "fix", "broken", "doesn't work" | dev → review + test-dev → tests |
+| Refactor | "refactor", "clean up" | dev → review + test-dev → tests |
+| UI Change | "style", "design", "layout" | dev → review + test-dev + visual → tests |
+| Test Only | "add tests", "coverage" | test-dev → review |
+
+### Step 2: Delegate to Developer
+```markdown
+@developer
+
+## Task
+[Clear description of what needs to be done]
+
+## Context
+[Why this is needed, any relevant background]
+
+## Scope
+- Files: [specific files or areas]
+- Constraints: [what NOT to change]
+
+## Acceptance Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+```
+
+### Step 3: Parallel Delegation
+
+After developer completes, delegate in parallel:
+
+**Always:**
+```
+@reviewer Review the changes in [files]
+@test-developer Write tests based on the test specification
+```
+
+**If `hasVisualChanges: yes`:**
+```
+@visual-reviewer Analyze the UI changes in [components]
+```
+
+### Step 4: Handle Issues
+
+Collect all feedback. If issues found:
+```
+@developer Fix the following issues:
+
+## From Reviewer
+- [issue 1]
+- [issue 2]
+
+## From Visual-Reviewer
+- [visual issue 1]
+```
+
+Then re-run parallel review.
+
+### Step 5: Run All Tests
 ```bash
 cd hl7-helper-web
 
-# Development
-npm run dev          # Start dev server at http://localhost:3000
-
-# Production
-npm run build        # Build for production
-npm run start        # Start production server
-
-# Code Quality
-npm run lint         # Run ESLint (eslint-config-next with TypeScript)
+# All quality gates
+npm run lint
+npm test
+npm run test:e2e
+npm run test:visual
+npm run test:a11y
+npm run build
 ```
 
-## Architecture
+### Step 6: Complete
 
-### Tech Stack
-- **Framework**: Next.js 16 with App Router (React 19)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
-- **Theming**: next-themes (light/dark/high-contrast)
+Only when ALL tests pass:
+```markdown
+## ✅ Complete: [Task Name]
 
-### Core Directory Structure
+**Summary**: [What was done]
 
-```
-hl7-helper-web/src/
-├── app/                    # Next.js App Router pages
-│   ├── page.tsx            # Main editor page (parse/edit HL7 messages)
-│   └── templates/          # Template management routes
-│       ├── page.tsx        # Template list/management
-│       ├── create/         # Create new templates
-│       └── use/            # Use templates to generate messages
-├── components/             # React components
-├── types/                  # TypeScript type definitions
-├── utils/                  # Core logic
-│   ├── hl7Parser.ts        # Parses raw HL7 text into SegmentDto[]
-│   ├── hl7Generator.ts     # Serializes SegmentDto[] back to HL7 text
-│   └── definitionLoader.ts # Loads HL7 field definitions for display
-└── data/
-    └── hl7-definitions/    # JSON field definitions (ADT-A01, ORU-R01, ORM-O01)
+**Changes**:
+- `src/utils/hl7Parser.ts`: [change]
+- `src/components/FieldInput.tsx`: [change]
+
+**Tests Added**: X new tests
+**Coverage**: Maintained/Improved
+
+**Commits**:
+- `abc123` feat: [message]
 ```
 
-### Key Data Types (src/types/index.ts)
+## Quality Gates
 
-HL7 messages are represented as a hierarchy:
-- `SegmentDto` - A segment (e.g., MSH, PID) containing fields
-- `FieldDto` - A field with position, value, and optional components
-- `ComponentDto` - Components/subcomponents within a field
+All must pass before marking done:
 
-### HL7 Parsing Logic
+| Gate | Command | Location |
+|------|---------|----------|
+| Lint | `npm run lint` | `hl7-helper-web/` |
+| Unit Tests | `npm test` | 90 tests |
+| E2E Tests | `npm run test:e2e` | 23 tests |
+| Visual Tests | `npm run test:visual` | 5 tests |
+| Accessibility | `npm run test:a11y` | 8 tests |
+| Build | `npm run build` | Must succeed |
 
-The parser (`src/utils/hl7Parser.ts`) handles the MSH segment specially:
-- MSH-1 is the field separator (`|`) - implicit in the format
-- MSH-2 is encoding characters (`^~\&`)
-- Subsequent fields are offset by 1 compared to other segments
+**Optional (periodic):**
+| Gate | Command | Threshold |
+|------|---------|-----------|
+| Mutation | `npm run test:mutation` | ≥75% |
+| Test Validation | `npm run validate:all` | Pass |
 
-Components are split by `^`, subcomponents by `&`.
+## Key Files Reference
 
-### Template System
+| Area | Files |
+|------|-------|
+| **Core Logic** | `src/utils/hl7Parser.ts`, `src/utils/hl7Generator.ts` |
+| **Main UI** | `src/app/page.tsx`, `src/components/MessageEditor.tsx` |
+| **Components** | `src/components/SegmentRow.tsx`, `src/components/FieldInput.tsx` |
+| **Types** | `src/types/index.ts` (SegmentDto, FieldDto, ComponentDto) |
+| **Unit Tests** | `tests/unit/hl7Parser.test.ts`, `tests/unit/hl7Generator.test.ts` |
+| **E2E Tests** | `tests/e2e/hl7-editor.spec.ts`, `tests/e2e/visual.spec.ts` |
 
-Templates (`src/types/template.ts`) store reusable HL7 message structures:
-- Templates are stored client-side
-- Each template has a messageType (e.g., "ADT-A01")
-- Used to generate new messages with customizable fields
+## Test Commands
+```bash
+cd hl7-helper-web
+
+# Individual test suites
+npm test                    # 90 unit + component tests
+npm run test:e2e            # 23 E2E workflow tests
+npm run test:visual         # 5 visual regression tests
+npm run test:a11y           # 8 accessibility tests
+npm run test:mutation       # Mutation score (target: ≥75%)
+
+# Combined
+npm run test:all            # Everything
+
+# With coverage
+npm run test:coverage
+
+# Update visual baselines
+npm run test:visual:update
+```
+
+## Decision Rules
+
+| Situation | Action |
+|-----------|--------|
+| Requirements unclear | Ask user for clarification |
+| Reviewer finds critical issue | @developer fixes → re-review |
+| Tests fail | @developer or @test-developer fixes |
+| Visual issues found | @developer fixes → @visual-reviewer re-checks |
+| 3+ review cycles without resolution | Escalate to user |
+| Major architecture decision | Present options to user |
+
+## Communication
+
+**Status Update:**
+```
+## Status: [Task]
+Phase: Implementation / Review / Testing / Complete
+Progress: [X/Y steps]
+Blockers: [Issues or "None"]
+Next: [Immediate next action]
+```
+
+**Task Handoff:**
+```
+@[agent]
+
+## Task
+[What to do]
+
+## Context
+[Background]
+
+## Scope
+[Files/areas]
+
+## Acceptance Criteria
+- [ ] ...
+```
+
+## Anti-Patterns
+
+- ❌ Writing code yourself (delegate to @developer)
+- ❌ Skipping review for "small changes"
+- ❌ Skipping tests for "obvious code"
+- ❌ Marking done before ALL tests pass
+- ❌ Running visual-reviewer when no UI changes
+- ❌ Infinite review loops (max 3, then escalate)
+- ❌ Forgetting to `cd hl7-helper-web` before running commands
+
+## Getting Started
+
+When you receive a task:
+
+1. **Understand**: What type of task? What files involved?
+2. **Check state**: `cd hl7-helper-web && git status`
+3. **Delegate**: Send to @developer with clear spec
+4. **Coordinate**: Parallel review after implementation
+5. **Verify**: Run all quality gates
+6. **Complete**: Summarize and commit
+
+If task is unclear, ask:
+- "What is the expected behavior?"
+- "Which files should be changed?"
+- "Are there constraints I should know about?"
+- "What does 'done' look like?"

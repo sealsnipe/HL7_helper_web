@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(rm:*)",
+      "Bash(cmd //c \"rmdir /s /q D:\\Projects\\HL7_Helper_web\\ViewModels\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\MARIS-HL7-Helper.sln\")",
+      "Bash(test:*)",
+      "Bash(cmd /c rmdir /s /q \"D:\\Projects\\HL7_Helper_web\\HL7Helper.Api\")",
+      "Bash(powershell:*)",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\api_response.json\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\api_response_shadow.json\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\debug_log.txt\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\sample.txt\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\nul\")",
+      "Bash(del \"D:\\Projects\\HL7_Helper_web\\package-lock.json\")",
+      "Bash(del .roomodes)",
+      "Bash(del project-research.md)",
+      "Bash(del completed_tickets.md)",
+      "Bash(del nul)",
+      "Bash(npm install)",
+      "Bash(npm audit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(tree:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRemove unused code and simplify to web-only architecture\n\n- Remove old WPF desktop application (HL7Helper/)\n- Remove unused ASP.NET Core backend API (HL7Helper.Api/)\n- Remove old ViewModels and solution files\n- Remove puppeteer dependency and verification script\n- Remove old documentation and tracking files\n- Fix linting errors in React components\n- Update README for web-only Next.js architecture\n\nThe project now contains only the actively-used Next.js frontend\nwith client-side HL7 parsing, editing, and generation.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" status)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" log --oneline -5)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" add CLAUDE.md)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" commit -m \"$(cat <<''EOF''\nAdd CLAUDE.md for Claude Code guidance\n\nProvides project overview, commands, architecture details, and\nHL7 parsing conventions for future Claude Code sessions.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" diff --stat)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" diff --stat hl7-helper-web/src/app/templates/)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" log --oneline -3)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" add hl7-helper-web/src/components/FieldInput.tsx hl7-helper-web/src/types/index.ts hl7-helper-web/src/utils/hl7Generator.ts hl7-helper-web/src/utils/hl7Parser.ts)",
+      "Bash(git -C \"D:\\Projects\\HL7_Helper_web\" commit -m \"$(cat <<''EOF''\nFix critical HL7 parsing and type safety issues\n\n- Add repetition separator (~) handling to parser and generator\n- Add repetitions property to FieldDto type for repeated fields\n- Add id property to SegmentDto type (was assigned but not in type)\n- Update FieldInput to display and edit repeated fields\n- Clear components when editing repetition values directly\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+    ]
+  },
+  "outputStyle": "default"
+}

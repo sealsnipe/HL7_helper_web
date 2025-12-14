@@ -1,0 +1,29 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "pages": [
+    { "name": "empty", "path": "/" },
+    {
+      "name": "parsed",
+      "path": "/",
+      "actions": [
+        { "type": "fill", "selector": "textarea", "value": "MSH|^~\\&|EPIC|HOSP|LAB|FAC|202401151430||ADT^A01|MSG001|P|2.5\nPID|1||MRN12345^^^HOSP^MR||SMITH^JANE^M||19850315|F\nPV1|1|I|ICU^101^A" },
+        { "type": "click", "selector": "button:has-text('Parse')" },
+        { "type": "wait", "duration": 1500 }
+      ]
+    },
+    {
+      "name": "editing",
+      "path": "/",
+      "actions": [
+        { "type": "fill", "selector": "textarea", "value": "MSH|^~\\&|SRC|FAC|||202401011200||ADT^A01|1|P|2.5\nPID|1||12345||DOE^JOHN||19800101|M" },
+        { "type": "click", "selector": "button:has-text('Parse')" },
+        { "type": "wait", "duration": 1000 }
+      ]
+    }
+  ],
+  "viewports": [
+    { "name": "mobile", "width": 375, "height": 667 },
+    { "name": "desktop", "width": 1440, "height": 900 }
+  ],
+  "outputDir": "./results"
+}

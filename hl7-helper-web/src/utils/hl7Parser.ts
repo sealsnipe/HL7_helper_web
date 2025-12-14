@@ -1,13 +1,40 @@
 import { SegmentDto, FieldDto, ComponentDto } from '@/types';
 
+/**
+ * Unescape HL7 escape sequences in a value
+ * \F\ = | (field separator)
+ * \S\ = ^ (component separator)
+ * \R\ = ~ (repetition separator)
+ * \E\ = \ (escape character)
+ * \T\ = & (subcomponent separator)
+ *
+ * NOTE: This implementation assumes standard encoding characters (^~\&).
+ * Non-standard encoding characters from MSH-2 are not currently supported.
+ */
+const unescapeHl7 = (value: string): string => {
+    return value
+        .replace(/\\F\\/g, '|')
+        .replace(/\\S\\/g, '^')
+        .replace(/\\R\\/g, '~')
+        .replace(/\\T\\/g, '&')
+        .replace(/\\E\\/g, '\\');
+};
+
 export const parseHl7Message = (message: string): SegmentDto[] => {
     if (!message) return [];
 
-    const segments = message.split(/\r?\n/).filter(line => line.trim().length > 0);
+    // HL7 standard uses \r as segment terminator, but we also handle \n and \r\n for flexibility
+    // Order matters: \r\n must be checked before \r to avoid splitting on both
+    const segments = message.split(/\r\n|\n|\r/).filter(line => line.trim().length > 0);
 
     return segments.map((line, index) => {
         const fields = line.split('|');
         const segmentName = fields[0];
+
+        // Validate segment name (3 uppercase alphanumeric chars, starting with letter)
+        if (!/^[A-Z][A-Z0-9]{2}$/.test(segmentName)) {
+            console.warn(`Invalid HL7 segment name "${segmentName}" on line ${index + 1}. Expected 3 uppercase alphanumeric characters starting with a letter.`);
+        }
 
         // Handle MSH special case
         // MSH|^~\&|...
@@ -65,14 +92,14 @@ const parseField = (value: string, position: number): FieldDto => {
                 const components = repVal.split('^').map((compVal, idx) => parseComponent(compVal, idx + 1));
                 return {
                     position,
-                    value: repVal,
+                    value: unescapeHl7(repVal),
                     components,
                     isEditable: false
                 };
             }
             return {
                 position,
-                value: repVal,
+                value: unescapeHl7(repVal),
                 components: [],
                 isEditable: false
             };
@@ -92,6 +119,8 @@ const parseField = (value: string, position: number): FieldDto => {
         const components = value.split('^').map((compVal, idx) => parseComponent(compVal, idx + 1));
         return {
             position,
+            // NOTE: field.value remains raw (not unescaped) when components exist,
+            // since the generator uses components for serialization, not the parent value.
             value: value,
             components,
             isEditable: false
@@ -100,7 +129,7 @@ const parseField = (value: string, position: number): FieldDto => {
 
     return {
         position,
-        value: value,
+        value: unescapeHl7(value),
         components: [],
         isEditable: false
     };
@@ -111,7 +140,7 @@ const parseComponent = (value: string, position: number): ComponentDto => {
     if (value.includes('&')) {
         const subComponents = value.split('&').map((subVal, idx) => ({
             position: idx + 1,
-            value: subVal,
+            value: unescapeHl7(subVal),
             subComponents: [], // SubComponents are ComponentDto[], so they need this property
         }));
         return {
@@ -123,7 +152,7 @@ const parseComponent = (value: string, position: number): ComponentDto => {
 
     return {
         position,
-        value: value,
+        value: unescapeHl7(value),
         subComponents: [],
     };
 };

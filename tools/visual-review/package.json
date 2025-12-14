@@ -1,0 +1,16 @@
+{
+  "name": "visual-review",
+  "version": "1.0.0",
+  "description": "AI-powered visual review tool",
+  "main": "index.ts",
+  "scripts": {
+    "review": "npx ts-node index.ts config.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@types/node": "^22.10.2",
+    "playwright": "^1.49.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

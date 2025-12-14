@@ -1,0 +1,173 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hl7-helper-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: hl7-helper-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit & Component Tests
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./hl7-helper-web/coverage/lcov.info
+          fail_ci_if_error: false
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: hl7-helper-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: hl7-helper-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Run Visual tests
+        run: npm run test:visual
+
+      - name: Run Accessibility tests
+        run: npm run test:a11y
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: hl7-helper-web/test-results/
+
+  mutation:
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: hl7-helper-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: hl7-helper-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run mutation testing
+        run: npm run test:mutation -- --reporters clear-text
+
+      - name: Check mutation score
+        run: |
+          if [ -f reports/mutation/mutation.json ]; then
+            SCORE=$(cat reports/mutation/mutation.json | jq '.mutationScore // 0')
+            echo "Mutation score: $SCORE%"
+            if (( $(echo "$SCORE < 75" | bc -l) )); then
+              echo "Mutation score below 75%"
+              exit 1
+            fi
+          fi
+
+  ai-visual:
+    runs-on: ubuntu-latest
+    needs: [test, e2e]
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: hl7-helper-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: hl7-helper-web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd ../tools/visual-review && npm install
+          npx playwright install chromium
+
+      - name: Build and start server
+        run: |
+          npm run build
+          npm run start &
+          npx wait-on http://localhost:3000
+
+      - name: Run AI visual review
+        run: cd ../tools/visual-review && npm run review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Upload AI review results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-visual-review
+          path: tools/visual-review/results/
+
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = fs.readFileSync('tools/visual-review/results/REPORT.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## AI Visual Review\n\n' + report
+              });
+            } catch (e) {
+              console.log('No report to post:', e.message);
+            }
