@@ -428,15 +428,43 @@ test.describe('HL7 Editor - New Message Flow', () => {
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Click New Message (in NavigationHeader)
-    page.on('dialog', dialog => dialog.accept());
     const newMessageButton = page.locator('button:has-text("New")');
     await newMessageButton.click();
+
+    // Wait for confirmation dialog to appear and click confirm
+    const confirmDialog = page.locator('[data-testid="confirm-dialog"]');
+    await expect(confirmDialog).toBeVisible();
+    const confirmButton = page.locator('[data-testid="confirm-dialog-confirm"]');
+    await confirmButton.click();
 
     // Verify textarea is cleared
     await expect(textarea).toHaveValue('');
 
     // Verify editor shows empty state
     await expect(page.locator('text=No Message Loaded')).toBeVisible();
+  });
+
+  test('should cancel clearing when confirmation is cancelled', async ({ page }) => {
+    await page.goto('/');
+
+    const textarea = page.locator('textarea[placeholder*="MSH"]');
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
+    await expect(page.locator('text=Visual Editor')).toBeVisible();
+
+    // Click New Message
+    const newMessageButton = page.locator('button:has-text("New")');
+    await newMessageButton.click();
+
+    // Wait for confirmation dialog and click cancel
+    const confirmDialog = page.locator('[data-testid="confirm-dialog"]');
+    await expect(confirmDialog).toBeVisible();
+    const cancelButton = page.locator('[data-testid="confirm-dialog-cancel"]');
+    await cancelButton.click();
+
+    // Dialog should close but message should remain
+    await expect(confirmDialog).not.toBeVisible();
+    await expect(textarea).not.toHaveValue('');
+    await expect(page.locator('text=Visual Editor')).toBeVisible();
   });
 });
 

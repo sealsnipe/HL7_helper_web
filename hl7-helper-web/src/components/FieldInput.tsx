@@ -211,6 +211,8 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highl
                                         comp.value,
                                         effectiveIsEditable,
                                         (newVal) => {
+                                            // Bounds check before accessing array
+                                            if (!field.components || idx >= field.components.length) return;
                                             // Update this component's value
                                             const newComponents = [...field.components];
                                             newComponents[idx] = { ...comp, value: newVal };
@@ -234,8 +236,11 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highl
                                                     sub.value,
                                                     effectiveIsEditable,
                                                     (newSubVal) => {
+                                                        // Bounds check before accessing arrays
+                                                        if (!field.components || idx >= field.components.length) return;
+                                                        if (!comp.subComponents || subIdx >= comp.subComponents.length) return;
                                                         // Update subcomponent
-                                                        const newSubComponents = [...(comp.subComponents || [])];
+                                                        const newSubComponents = [...comp.subComponents];
                                                         newSubComponents[subIdx] = { ...sub, value: newSubVal };
 
                                                         // Update component
