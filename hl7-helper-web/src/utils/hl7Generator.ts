@@ -30,6 +30,16 @@ export const generateHl7Message = (segments: SegmentDto[]): string => {
 };
 
 const serializeField = (field: FieldDto): string => {
+    // If repetitions exist, join them with ~
+    if (field.repetitions && field.repetitions.length > 0) {
+        return field.repetitions.map(rep => {
+            if (rep.components && rep.components.length > 0) {
+                return rep.components.map(serializeComponent).join('^');
+            }
+            return rep.value || '';
+        }).join('~');
+    }
+
     // If components exist, use them
     if (field.components && field.components.length > 0) {
         return field.components.map(serializeComponent).join('^');

@@ -37,6 +37,61 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
         </div>
     );
 
+    // If field has repetitions, render them
+    if (field.repetitions && field.repetitions.length > 0) {
+        return (
+            <div className="flex flex-col items-start border border-border rounded p-1 bg-muted/30 w-full">
+                <div className="flex items-center gap-2 w-full mb-0.5">
+                    <label className="text-[10px] text-muted-foreground font-mono font-bold text-primary">
+                        {field.position}
+                    </label>
+                    {definition && (
+                        <span className="text-xs font-medium text-foreground">
+                            {definition.description}
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-col gap-2 w-full">
+                    {field.repetitions.map((rep, repIdx) => {
+                        const repFullValue = rep.components && rep.components.length > 0
+                            ? rep.components.map(c => {
+                                if (c.subComponents && c.subComponents.length > 0) {
+                                    return c.subComponents.map(s => s.value).join('&');
+                                }
+                                return c.value;
+                            }).join('^')
+                            : rep.value;
+
+                        return (
+                            <div key={`${field.position}-rep-${repIdx}`} className="flex flex-col border border-primary/20 rounded p-2 bg-card">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <label className="text-[10px] text-primary font-mono font-bold">
+                                        Rep {repIdx + 1}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={repFullValue}
+                                        readOnly={!field.isEditable}
+                                        onChange={(e) => {
+                                            const newReps = [...field.repetitions!];
+                                            newReps[repIdx] = { ...rep, value: e.target.value, components: [] };
+                                            const newValue = newReps.map(r => r.value).join('~');
+                                            onChange(newValue);
+                                        }}
+                                        className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${field.isEditable
+                                            ? 'bg-background border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none text-foreground'
+                                            : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
+                                        }`}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
     // If field has components, render them instead of the main value
     if (field.components && field.components.length > 0) {
         // Reconstruct the full value for display

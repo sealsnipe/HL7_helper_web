@@ -56,6 +56,37 @@ export const parseHl7Message = (message: string): SegmentDto[] => {
 };
 
 const parseField = (value: string, position: number): FieldDto => {
+    // Check for repetitions (~) first
+    if (value.includes('~')) {
+        const repetitionValues = value.split('~');
+        const repetitions = repetitionValues.map((repVal) => {
+            // Parse each repetition for components
+            if (repVal.includes('^')) {
+                const components = repVal.split('^').map((compVal, idx) => parseComponent(compVal, idx + 1));
+                return {
+                    position,
+                    value: repVal,
+                    components,
+                    isEditable: false
+                };
+            }
+            return {
+                position,
+                value: repVal,
+                components: [],
+                isEditable: false
+            };
+        });
+
+        return {
+            position,
+            value: value,
+            components: [],
+            isEditable: false,
+            repetitions
+        };
+    }
+
     // Check for components (^)
     if (value.includes('^')) {
         const components = value.split('^').map((compVal, idx) => parseComponent(compVal, idx + 1));

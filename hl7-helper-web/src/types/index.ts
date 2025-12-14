@@ -9,9 +9,11 @@ export interface FieldDto {
     value: string;
     isEditable: boolean;
     components: ComponentDto[];
+    repetitions?: FieldDto[];
 }
 
 export interface SegmentDto {
+    id: string;
     name: string;
     fields: FieldDto[];
 }
