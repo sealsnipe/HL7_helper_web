@@ -1,15 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Sample HL7 message for visual tests
 const SAMPLE_ADT_A01 = `MSH|^~\\&|SENDING|FACILITY|RECEIVING|DEST|202401011200||ADT^A01|MSG001|P|2.5
 PID|1||12345^^^MRN||DOE^JOHN^MIDDLE||19800101|M`;
 
+// Debounce delay for live parsing (ms) - matches PARSE_DEBOUNCE_MS in page.tsx
+const LIVE_PARSE_DELAY = 500; // 300ms debounce + buffer for rendering
+
+// Helper function to fill textarea and wait for live parsing to complete
+async function fillAndWaitForParse(page: Page, text: string) {
+  const textarea = page.locator('textarea[placeholder*="MSH"]');
+  await textarea.fill(text);
+  await page.waitForTimeout(LIVE_PARSE_DELAY);
+}
+
 test.describe('Visual Regression Tests', () => {
   test('empty editor state', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the page to fully load
-    await expect(page.locator('h1').filter({ hasText: 'HL7 Helper.' })).toBeVisible();
+    // Wait for the page to fully load - verify textarea is visible
+    const textarea = page.locator('textarea[placeholder*="MSH"]');
+    await expect(textarea).toBeVisible();
 
     // Verify we're in the empty state
     await expect(page.locator('text=No Message Loaded')).toBeVisible();
@@ -21,10 +32,8 @@ test.describe('Visual Regression Tests', () => {
   test('parsed message with segments displayed', async ({ page }) => {
     await page.goto('/');
 
-    // Fill and parse the message
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    // Fill and wait for live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for Visual Editor to be visible
     await expect(page.locator('text=Visual Editor')).toBeVisible();
@@ -38,10 +47,8 @@ test.describe('Visual Regression Tests', () => {
   test('expanded segment showing fields', async ({ page }) => {
     await page.goto('/');
 
-    // Parse the message
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    // Fill and wait for live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for Visual Editor and segments
     await expect(page.locator('text=Visual Editor')).toBeVisible();
@@ -58,10 +65,8 @@ test.describe('Visual Regression Tests', () => {
   test('collapsed segments', async ({ page }) => {
     await page.goto('/');
 
-    // Parse the message
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    // Fill and wait for live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for Visual Editor
     await expect(page.locator('text=Visual Editor')).toBeVisible();
@@ -84,13 +89,12 @@ test.describe('Visual Regression Tests', () => {
 
     await page.goto('/');
 
-    // Wait for the page to load
-    await expect(page.locator('h1').filter({ hasText: 'HL7 Helper.' })).toBeVisible();
-
-    // Parse a message
+    // Wait for the page to load - verify textarea is visible
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await expect(textarea).toBeVisible();
+
+    // Fill and wait for live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for Visual Editor
     await expect(page.locator('text=Visual Editor')).toBeVisible();

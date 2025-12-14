@@ -8,13 +8,14 @@ test.describe('Smoke Test', () => {
     // Verify the page title contains "HL7"
     await expect(page).toHaveTitle(/HL7/);
 
-    // Verify the main hero heading is visible
-    await expect(page.getByRole('heading', { name: 'HL7 Helper.' })).toBeVisible();
-
     // Verify the main editor textarea is visible
     await expect(page.getByPlaceholder(/MSH/i)).toBeVisible();
 
-    // Verify the Parse Message button is visible
-    await expect(page.getByRole('button', { name: /Parse Message/i })).toBeVisible();
+    // Verify the empty state message is shown
+    await expect(page.locator('text=No Message Loaded')).toBeVisible();
+
+    // Verify navigation buttons are present (New Message, Load Example)
+    await expect(page.getByRole('button', { name: /New/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Example/i })).toBeVisible();
   });
 });

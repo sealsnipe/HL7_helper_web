@@ -6,10 +6,36 @@ interface Props {
     field: FieldDto;
     definition: FieldDefinition | null;
     onChange: (value: string) => void;
+    highlightVariable?: boolean;
+    variableOnlyEditing?: boolean;
 }
 
-export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => {
+// Helper to check if a value contains HELPERVARIABLE
+const containsVariable = (value: string): boolean => {
+    return value.includes('HELPERVARIABLE');
+};
+
+export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highlightVariable = false, variableOnlyEditing = false }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
+
+    // Check if this field or any of its components contains HELPERVARIABLE
+    const fieldHasVariable = React.useMemo(() => {
+        if (containsVariable(field.value)) return true;
+        if (field.components?.some(c => containsVariable(c.value))) return true;
+        if (field.components?.some(c => c.subComponents?.some(s => containsVariable(s.value)))) return true;
+        if (field.repetitions?.some(r => containsVariable(r.value))) return true;
+        return false;
+    }, [field]);
+
+    // Highlight class for fields containing HELPERVARIABLE
+    const highlightClass = highlightVariable && fieldHasVariable
+        ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20'
+        : '';
+
+    // Compute effective editability: if variableOnlyEditing is true, only fields with variables are editable
+    const effectiveIsEditable = variableOnlyEditing
+        ? field.isEditable && fieldHasVariable
+        : field.isEditable;
 
     // Helper to render a single input with proper accessibility and test attributes
     const renderInput = (label: string, value: string, isEditable: boolean, onChangeVal: (v: string) => void, key: string, description?: string) => {
@@ -47,7 +73,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
     // If field has repetitions, render them
     if (field.repetitions && field.repetitions.length > 0) {
         return (
-            <div className="flex flex-col items-start border border-border rounded p-1 bg-muted/30 w-full">
+            <div className={`flex flex-col items-start border border-border rounded p-1 bg-muted/30 w-full ${highlightClass}`}>
                 <div className="flex items-center gap-2 w-full mb-0.5">
                     <label className="text-[10px] text-muted-foreground font-mono font-bold text-primary">
                         {field.position}
@@ -78,7 +104,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                     <input
                                         type="text"
                                         value={repFullValue}
-                                        readOnly={!field.isEditable}
+                                        readOnly={!effectiveIsEditable}
                                         onChange={(e) => {
                                             const newValue = e.target.value;
                                             const newReps = [...field.repetitions!];
@@ -114,7 +140,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                         }}
                                         aria-label={`${definition?.description || `Field ${field.position}`} repetition ${repIdx + 1}`}
                                         data-testid={`field-input-${field.position}-rep-${repIdx}`}
-                                        className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${field.isEditable
+                                        className={`border rounded px-2 py-1 text-sm font-mono w-full transition-colors ${effectiveIsEditable
                                             ? 'bg-background border-input focus:border-ring focus:ring-1 focus:ring-ring outline-none text-foreground'
                                             : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                                         }`}
@@ -139,7 +165,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
         }).join('^');
 
         return (
-            <div className="flex flex-col items-start border border-border rounded p-1 bg-muted/30 w-full">
+            <div className={`flex flex-col items-start border border-border rounded p-1 bg-muted/30 w-full ${highlightClass}`}>
                 <div className="flex items-center gap-2 w-full">
                     {/* Main Value Display (Reconstructed) */}
                     <div className="flex flex-col w-full">
@@ -183,7 +209,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                     {renderInput(
                                         `${field.position}.${comp.position}`,
                                         comp.value,
-                                        field.isEditable,
+                                        effectiveIsEditable,
                                         (newVal) => {
                                             // Update this component's value
                                             const newComponents = [...field.components];
@@ -206,7 +232,7 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
                                                 renderInput(
                                                     `${field.position}.${comp.position}.${sub.position}`,
                                                     sub.value,
-                                                    field.isEditable,
+                                                    effectiveIsEditable,
                                                     (newSubVal) => {
                                                         // Update subcomponent
                                                         const newSubComponents = [...(comp.subComponents || [])];
@@ -243,12 +269,17 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange }) => 
         );
     }
 
-    return renderInput(
-        `${field.position}`,
-        field.value,
-        field.isEditable,
-        onChange,
-        `${field.position}`,
-        definition?.description
+    // Simple field without components or repetitions
+    return (
+        <div className={highlightClass ? `rounded ${highlightClass}` : ''}>
+            {renderInput(
+                `${field.position}`,
+                field.value,
+                effectiveIsEditable,
+                onChange,
+                `${field.position}`,
+                definition?.description
+            )}
+        </div>
     );
 };

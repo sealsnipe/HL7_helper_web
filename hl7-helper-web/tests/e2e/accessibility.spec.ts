@@ -5,9 +5,19 @@ const SAMPLE_MESSAGE = `MSH|^~\\&|EPIC|HOSP|LAB|FAC|202401151430||ADT^A01|MSG001
 PID|1||MRN12345^^^HOSP^MR||SMITH^JANE^M||19850315|F
 PV1|1|I|ICU^101^A|E|||12345^DOC|||MED`
 
+// Debounce delay for live parsing (ms) - matches PARSE_DEBOUNCE_MS in page.tsx
+const LIVE_PARSE_DELAY = 500 // 300ms debounce + buffer for rendering
+
 // Helper to wait for parsed content
 async function waitForParsedContent(page: import('@playwright/test').Page) {
   await page.waitForSelector('input:not([readonly])', { state: 'visible', timeout: 5000 })
+}
+
+// Helper function to fill textarea and wait for live parsing to complete
+async function fillAndWaitForParse(page: import('@playwright/test').Page, text: string) {
+  const textarea = page.locator('textarea').first()
+  await textarea.fill(text)
+  await page.waitForTimeout(LIVE_PARSE_DELAY)
 }
 
 test.describe('Accessibility', () => {
@@ -27,8 +37,8 @@ test.describe('Accessibility', () => {
 
   test('parsed message has no critical violations (excluding known label issue)', async ({ page }) => {
     await page.goto('/')
-    await page.locator('textarea').first().fill(SAMPLE_MESSAGE)
-    await page.getByRole('button', { name: /parse/i }).click()
+    // Use live parsing instead of button click
+    await fillAndWaitForParse(page, SAMPLE_MESSAGE)
     await waitForParsedContent(page)
 
     const results = await new AxeBuilder({ page })
@@ -46,8 +56,8 @@ test.describe('Accessibility', () => {
 
   test('color contrast passes', async ({ page }) => {
     await page.goto('/')
-    await page.locator('textarea').first().fill(SAMPLE_MESSAGE)
-    await page.getByRole('button', { name: /parse/i }).click()
+    // Use live parsing instead of button click
+    await fillAndWaitForParse(page, SAMPLE_MESSAGE)
     await waitForParsedContent(page)
 
     const results = await new AxeBuilder({ page })
@@ -86,10 +96,8 @@ test.describe('Accessibility', () => {
 
   test('buttons are keyboard accessible', async ({ page }) => {
     await page.goto('/')
-    await page.locator('textarea').first().fill(SAMPLE_MESSAGE)
-
-    // Find parse button and click it
-    await page.getByRole('button', { name: /parse/i }).click()
+    // Use live parsing instead of button click
+    await fillAndWaitForParse(page, SAMPLE_MESSAGE)
 
     // Should have parsed the message - wait for editable inputs
     await waitForParsedContent(page)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { MessageEditor } from '@/components/MessageEditor';
 import { SegmentDto } from '@/types';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -9,21 +9,32 @@ import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 
+// Debounce delay for live parsing (ms)
+const PARSE_DEBOUNCE_MS = 300;
+
 export default function Home() {
   const [hl7Text, setHl7Text] = useState<string>('');
   const [segments, setSegments] = useState<SegmentDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [showTemplateModal, setShowTemplateModal] = useState<boolean>(false);
+  const [isTyping, setIsTyping] = useState<boolean>(false);
 
-  const handleParse = () => {
+  // Ref for debounce timer
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Parse function for live parsing
+  const parseMessage = useCallback((text: string) => {
+    if (!text.trim()) {
+      setSegments([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    setError(null);
     try {
-      if (!hl7Text) {
-        throw new Error('Please enter an HL7 message');
-      }
-      const data = parseHl7Message(hl7Text);
+      const data = parseHl7Message(text);
       // Make fields editable except for MSH-1 and MSH-2
       const editableSegments = data.map((seg) => ({
         ...seg,
@@ -33,6 +44,7 @@ export default function Home() {
         }))
       }));
       setSegments(editableSegments);
+      setError(null);
     } catch (err) {
       console.error("Parse error:", err);
       setError(err instanceof Error ? err.message : "Failed to parse message");
@@ -40,7 +52,33 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Handle text change with debounced parsing
+  const handleTextChange = useCallback((newText: string) => {
+    setHl7Text(newText);
+    setIsTyping(true);
+
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new debounce timer
+    debounceTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+      parseMessage(newText);
+    }, PARSE_DEBOUNCE_MS);
+  }, [parseMessage]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleUpdate = (updatedSegments: SegmentDto[]) => {
     setSegments(updatedSegments);
@@ -70,10 +108,12 @@ export default function Home() {
   };
 
   const handleLoadTemplate = (templateKey: string) => {
-    setHl7Text(SAMPLE_TEMPLATES[templateKey]);
+    const template = SAMPLE_TEMPLATES[templateKey];
+    setHl7Text(template);
     setShowTemplateModal(false);
-    setSegments([]); // Clear previous segments until re-parsed
     setError(null);
+    // Parse immediately when loading a template
+    parseMessage(template);
   };
 
   /**
@@ -100,12 +140,14 @@ export default function Home() {
   };
 
   // Check for generated message from template system
-  React.useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('loadGenerated') === 'true') {
       const generated = localStorage.getItem('generated_hl7');
       if (generated && isValidHl7Content(generated)) {
         setHl7Text(generated);
+        // Parse immediately when loading from template system
+        parseMessage(generated);
         // Clean up localStorage after successful load
         localStorage.removeItem('generated_hl7');
       } else if (generated) {
@@ -115,7 +157,7 @@ export default function Home() {
       // Clean up URL
       window.history.replaceState({}, '', '/');
     }
-  }, []);
+  }, [parseMessage]);
 
   return (
     <main className="min-h-screen bg-background font-sans transition-colors relative text-foreground selection:bg-primary/20">
@@ -154,31 +196,18 @@ export default function Home() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-12">
-        <NavigationHeader
-          activePage="home"
-          onNewMessage={handleNewMessage}
-          onLoadExample={() => setShowTemplateModal(true)}
-        />
-
-        {/* Hero Section */}
-        <div className="text-center space-y-6 py-12 relative">
-          <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium mb-4">
-            <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
-            v1.0 Now Available
-          </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-muted-foreground">
-              HL7 Helper
-            </span>
-            <span className="text-primary">.</span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            The modern, intelligent way to parse, edit, and generate HL7 messages.
-            Built for healthcare developers who demand <span className="text-foreground font-medium">speed</span> and <span className="text-foreground font-medium">precision</span>.
-          </p>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <NavigationHeader
+            activePage="home"
+            onNewMessage={handleNewMessage}
+            onLoadExample={() => setShowTemplateModal(true)}
+          />
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Main Editor Area */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left Column: Input */}
@@ -202,40 +231,26 @@ export default function Home() {
               <textarea
                 className="flex-1 w-full min-h-[400px] p-4 border border-input/50 rounded-lg font-mono text-sm bg-background/50 text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all resize-none custom-scrollbar"
                 value={hl7Text}
-                onChange={(e) => setHl7Text(e.target.value)}
+                onChange={(e) => handleTextChange(e.target.value)}
                 placeholder="MSH|^~\&|..."
                 spellCheck={false}
+                data-testid="raw-hl7-input"
               />
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={handleParse}
-                  disabled={loading || !hl7Text}
-                  className="relative overflow-hidden px-8 py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25 transition-all active:scale-95 group/btn"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Parse Message
-                        <svg className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </>
-                    )}
-                  </span>
-                </button>
-              </div>
+              {/* Live parsing indicator */}
+              {isTyping && hl7Text.trim() && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Parsing...</span>
+                </div>
+              )}
             </div>
 
-            {error && (
+            {/* Only show error when not typing */}
+            {error && !isTyping && (
               <div className="mt-4 p-4 bg-destructive/5 border border-destructive/20 text-destructive rounded-xl shadow-sm flex items-start gap-3">
                 <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

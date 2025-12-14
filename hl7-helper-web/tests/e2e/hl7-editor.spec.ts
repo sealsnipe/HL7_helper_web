@@ -7,6 +7,9 @@ PID|1||12345^^^MRN||DOE^JOHN^MIDDLE||19800101|M`;
 const SAMPLE_WITH_ESCAPES = `MSH|^~\\&|SENDING|FACILITY|RECEIVING|DEST|202401011200||ADT^A01|MSG002|P|2.5
 PID|1||12345^^^MRN||DOE^JOHN\\F\\ESCAPED||19800101|M`;
 
+// Debounce delay for live parsing (ms) - matches PARSE_DEBOUNCE_MS in page.tsx
+const LIVE_PARSE_DELAY = 500; // 300ms debounce + buffer for rendering
+
 // Helper function to find an editable input by value
 async function findEditableInput(page: Page, value: string): Promise<Locator | null> {
   await page.waitForSelector('input:not([readonly])', { state: 'visible', timeout: 5000 });
@@ -20,20 +23,23 @@ async function findEditableInput(page: Page, value: string): Promise<Locator | n
   return null;
 }
 
+// Helper function to fill textarea and wait for live parsing to complete
+async function fillAndWaitForParse(page: Page, text: string) {
+  const textarea = page.locator('textarea[placeholder*="MSH"]');
+  await textarea.fill(text);
+  await page.waitForTimeout(LIVE_PARSE_DELAY);
+}
+
 test.describe('HL7 Editor - Parse Flow', () => {
   test('should parse raw HL7 message and display segments', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the page to load
-    await expect(page.locator('h1').filter({ hasText: 'HL7 Helper.' })).toBeVisible();
-
-    // Find and fill the textarea with HL7 message
+    // Wait for the page to load - verify textarea is visible
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
+    await expect(textarea).toBeVisible();
 
-    // Click the Parse Message button
-    const parseButton = page.locator('button:has-text("Parse Message")');
-    await parseButton.click();
+    // Fill the textarea with HL7 message - live parsing will trigger automatically
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for segments to appear in the editor
     await expect(page.locator('.font-mono.text-lg:has-text("MSH")')).toBeVisible();
@@ -50,23 +56,23 @@ test.describe('HL7 Editor - Parse Flow', () => {
   test('should display error when parsing invalid HL7 message', async ({ page }) => {
     await page.goto('/');
 
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill('INVALID HL7 MESSAGE');
-
-    const parseButton = page.locator('button:has-text("Parse Message")');
-    await parseButton.click();
+    // Fill with invalid message - live parsing will trigger automatically
+    await fillAndWaitForParse(page, 'INVALID HL7 MESSAGE');
 
     // Should show error (or warning about invalid segment name)
     // Note: The app might still parse it but with warnings
-    await page.waitForTimeout(500);
+    // With live parsing, the error state should be visible after debounce
   });
 
   test('should handle empty input gracefully', async ({ page }) => {
     await page.goto('/');
 
-    // Try to parse without entering anything
-    const parseButton = page.locator('button:has-text("Parse Message")');
-    await expect(parseButton).toBeDisabled();
+    // Verify empty state shows "No Message Loaded"
+    await expect(page.locator('text=No Message Loaded')).toBeVisible();
+
+    // Textarea should be empty
+    const textarea = page.locator('textarea[placeholder*="MSH"]');
+    await expect(textarea).toHaveValue('');
   });
 });
 
@@ -74,10 +80,9 @@ test.describe('HL7 Editor - Edit Flow', () => {
   test('should edit a field value and update the message', async ({ page }) => {
     await page.goto('/');
 
-    // Parse the message
+    // Fill and wait for live parsing
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     // Wait for segments to be visible
     await expect(page.locator('text=Visual Editor')).toBeVisible();
@@ -109,8 +114,7 @@ test.describe('HL7 Editor - Edit Flow', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -141,9 +145,7 @@ test.describe('HL7 Editor - Edit Flow', () => {
   test('should collapse and expand segments', async ({ page }) => {
     await page.goto('/');
 
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -174,9 +176,7 @@ test.describe('HL7 Editor - Edit Flow', () => {
   test('should use Expand All and Collapse All buttons', async ({ page }) => {
     await page.goto('/');
 
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -201,10 +201,9 @@ test.describe('HL7 Editor - Generate Flow', () => {
   test('should generate HL7 output after editing', async ({ page }) => {
     await page.goto('/');
 
-    // Parse message
+    // Fill and wait for live parsing
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -227,8 +226,7 @@ test.describe('HL7 Editor - Generate Flow', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -251,9 +249,8 @@ test.describe('HL7 Editor - Round-trip Test', () => {
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
 
-    // First parse
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    // First parse via live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Edit a simple field (PID-1 Set ID)
@@ -273,11 +270,12 @@ test.describe('HL7 Editor - Round-trip Test', () => {
     const lines = generatedHl7.split(/\r?\n/).filter(l => l.trim());
     expect(lines.length).toBeGreaterThanOrEqual(2);
 
-    // Parse again (the generated HL7 should already be in the textarea)
-    await page.locator('button:has-text("Parse Message")').click();
+    // Trigger re-parse by making a small change and waiting
+    // The generated HL7 is already in the textarea, so we need to trigger re-parse
+    await textarea.clear();
+    await fillAndWaitForParse(page, generatedHl7);
 
     // Wait for Visual Editor to appear
-    await page.waitForTimeout(500); // Small delay for React to update
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Check for MSH segment
@@ -292,13 +290,13 @@ test.describe('HL7 Editor - Round-trip Test', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
+
+    // Initial parse via live parsing
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
+    await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Round-trip 3 times
     for (let i = 1; i <= 3; i++) {
-      await page.locator('button:has-text("Parse Message")').click();
-      await expect(page.locator('text=Visual Editor')).toBeVisible();
-
       // Edit PID-1 field (Set ID) - find by looking for value that matches current iteration or initial "1"
       const valueToFind = i === 1 ? "1" : `${i - 1}`;
       const setIdInput = await findEditableInput(page, valueToFind);
@@ -308,6 +306,14 @@ test.describe('HL7 Editor - Round-trip Test', () => {
 
       // Generate
       await page.locator('button:has-text("Update Raw")').click();
+
+      // If not the last iteration, trigger re-parse
+      if (i < 3) {
+        const currentValue = await textarea.inputValue();
+        await textarea.clear();
+        await fillAndWaitForParse(page, currentValue);
+        await expect(page.locator('text=Visual Editor')).toBeVisible();
+      }
     }
 
     // Final verification
@@ -322,8 +328,7 @@ test.describe('HL7 Editor - Escape Character Handling', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_WITH_ESCAPES);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_WITH_ESCAPES);
 
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
@@ -356,9 +361,8 @@ test.describe('HL7 Editor - Escape Character Handling', () => {
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
 
-    // Parse message with escapes
-    await textarea.fill(SAMPLE_WITH_ESCAPES);
-    await page.locator('button:has-text("Parse Message")').click();
+    // Fill and wait for live parsing
+    await fillAndWaitForParse(page, SAMPLE_WITH_ESCAPES);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Regenerate
@@ -373,8 +377,7 @@ test.describe('HL7 Editor - Escape Character Handling', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Find a simple editable field (PID-1 Set ID)
@@ -401,12 +404,10 @@ test.describe('HL7 Editor - Escape Character Handling', () => {
 
     // Create a message with backslash escape
     const messageWithBackslash = SAMPLE_ADT_A01.replace('DOE^JOHN^MIDDLE', 'DOE\\E\\BACKSLASH');
-    await textarea.fill(messageWithBackslash);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, messageWithBackslash);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // The field should display a single backslash
-    const fieldWithBackslash = page.locator('input').filter({ hasText: /BACKSLASH/ }).first();
     // Note: The exact matching might be tricky due to how the value is stored
 
     // Regenerate
@@ -423,8 +424,7 @@ test.describe('HL7 Editor - New Message Flow', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Click New Message (in NavigationHeader)
@@ -484,12 +484,11 @@ test.describe('HL7 Editor - Component Editing', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
-    await page.locator('button:has-text("Parse Message")').click();
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
     await expect(page.locator('text=Visual Editor')).toBeVisible();
 
     // Find a field with components (e.g., patient name DOE^JOHN^MIDDLE)
-    // Look for the expand button (▼)
+    // Look for the expand button
     const expandButton = page.locator('button:has-text("▼")').first();
 
     // Check if component view is available
@@ -522,19 +521,20 @@ test.describe('HL7 Editor - Accessibility', () => {
     await expect(page).toHaveTitle(/HL7/);
   });
 
-  test('should have visible heading', async ({ page }) => {
+  test('should have visible main content', async ({ page }) => {
     await page.goto('/');
-    const heading = page.locator('h1').filter({ hasText: 'HL7 Helper.' });
-    await expect(heading).toBeVisible();
+    // Verify the main editor area is visible (textarea and "No Message Loaded" state)
+    const textarea = page.locator('textarea[placeholder*="MSH"]');
+    await expect(textarea).toBeVisible();
+    await expect(page.locator('text=No Message Loaded')).toBeVisible();
   });
 
   test('should have keyboard navigable buttons', async ({ page }) => {
     await page.goto('/');
 
-    const textarea = page.locator('textarea[placeholder*="MSH"]');
-    await textarea.fill(SAMPLE_ADT_A01);
+    await fillAndWaitForParse(page, SAMPLE_ADT_A01);
 
-    // Tab to Parse button and press Enter
+    // Tab through interactive elements
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     // Note: Full keyboard navigation testing would require more detailed focus management

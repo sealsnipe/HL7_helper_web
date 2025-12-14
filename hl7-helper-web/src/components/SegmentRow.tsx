@@ -8,9 +8,11 @@ interface Props {
     isExpanded: boolean;
     onToggle: () => void;
     onFieldChange: (fieldIndex: number, value: string) => void;
+    highlightVariable?: boolean;
+    variableOnlyEditing?: boolean; // When true, only fields containing HELPERVARIABLE are editable
 }
 
-export const SegmentRow: React.FC<Props> = ({ segment, definition, isExpanded, onToggle, onFieldChange }) => {
+export const SegmentRow: React.FC<Props> = ({ segment, definition, isExpanded, onToggle, onFieldChange, highlightVariable = false, variableOnlyEditing = false }) => {
     // Filter out trailing empty fields
     const visibleFields = React.useMemo(() => {
         let lastNonEmptyIndex = -1;
@@ -53,6 +55,8 @@ export const SegmentRow: React.FC<Props> = ({ segment, definition, isExpanded, o
                             field={field}
                             definition={definition?.fields?.[field.position.toString()] || null}
                             onChange={(val) => onFieldChange(index, val)}
+                            highlightVariable={highlightVariable}
+                            variableOnlyEditing={variableOnlyEditing}
                         />
                     ))}
                 </div>

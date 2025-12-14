@@ -6,9 +6,11 @@ import { SegmentRow } from './SegmentRow';
 interface Props {
     segments: SegmentDto[];
     onUpdate: (segments: SegmentDto[]) => void;
+    highlightVariable?: boolean;
+    variableOnlyEditing?: boolean; // When true, only fields containing HELPERVARIABLE are editable
 }
 
-export const MessageEditor: React.FC<Props> = ({ segments, onUpdate }) => {
+export const MessageEditor: React.FC<Props> = ({ segments, onUpdate, highlightVariable = false, variableOnlyEditing = false }) => {
     // State to track expanded segments by index
     const [expandedIndices, setExpandedIndices] = React.useState<Set<number>>(new Set());
 
@@ -105,6 +107,8 @@ export const MessageEditor: React.FC<Props> = ({ segments, onUpdate }) => {
                         isExpanded={expandedIndices.has(index)}
                         onToggle={() => toggleSegment(index)}
                         onFieldChange={(fieldIndex, val) => handleFieldChange(index, fieldIndex, val)}
+                        highlightVariable={highlightVariable}
+                        variableOnlyEditing={variableOnlyEditing}
                     />
                 ))}
             </div>
