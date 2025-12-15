@@ -21,6 +21,13 @@ export interface SegmentDto {
     fields: FieldDto[];
 }
 
+export interface SerializationInstance {
+    id: string;
+    segments: SegmentDto[];
+    output: string;
+    copyButtonText: string;
+}
+
 export interface GenerateRequest {
     originalHl7: string;
     segments: SegmentDto[];

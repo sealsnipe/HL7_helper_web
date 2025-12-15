@@ -3,29 +3,36 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Template } from '@/types/template';
-import { SegmentDto } from '@/types';
+import { SegmentDto, SerializationInstance } from '@/types';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { MessageEditor } from '@/components/MessageEditor';
 import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
 import { loadTemplatesFromStorage } from '@/utils/templateValidation';
-import { applyVariableEditability } from '@/utils/templateHelpers';
+import { applyVariableEditability, fieldContainsVariable, getVariableBadgeColor } from '@/utils/templateHelpers';
 import { runMigrations } from '@/services/persistence/migrations';
+
 
 /**
  * Highlight HELPERVARIABLE placeholders in raw HL7 text
+ * Supports HELPERVARIABLE (basic) and HELPERVARIABLE1-999 (numbered groups)
  */
 const highlightVariablesInText = (text: string): React.ReactNode => {
     if (!text) return null;
 
-    const parts = text.split(/(HELPERVARIABLE)/g);
+    // Match HELPERVARIABLE followed by optional 1-3 digit number (1-999)
+    // The negative lookahead (?!\d) ensures plain HELPERVARIABLE doesn't match partial numbers
+    const parts = text.split(/(HELPERVARIABLE[1-9]\d{0,2}|HELPERVARIABLE(?!\d))/g);
     return parts.map((part, index) => {
-        if (part === 'HELPERVARIABLE') {
+        const match = part.match(/^HELPERVARIABLE([1-9]\d{0,2})?$/);
+        if (match) {
+            const groupId = match[1] ? parseInt(match[1], 10) : undefined;
+            const colorClass = getVariableBadgeColor(groupId);
             return (
                 <span
                     key={index}
-                    className="bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100 px-1 rounded font-bold"
+                    className={`${colorClass} px-1 rounded font-bold`}
                 >
                     {part}
                 </span>
@@ -73,9 +80,11 @@ export default function UseTemplatePage() {
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
     const [currentTemplateContent, setCurrentTemplateContent] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [editedSegments, setEditedSegments] = useState<SegmentDto[]>([]);
-    const [copyButtonText, setCopyButtonText] = useState('Copy to Clipboard');
     const [isLoading, setIsLoading] = useState(true);
+
+    // Multiple serializations state
+    const [serializations, setSerializations] = useState<SerializationInstance[]>([]);
+
 
     // Load templates from storage on client-side only
     useEffect(() => {
@@ -115,22 +124,25 @@ export default function UseTemplatePage() {
         return applyVariableEditability(segments);
     }, [currentTemplateContent]);
 
-    // Update edited segments when template changes
+    // Initialize first serialization when template changes
     useEffect(() => {
-        setEditedSegments(parsedSegments);
+        if (parsedSegments.length > 0) {
+            const firstInstance: SerializationInstance = {
+                id: crypto.randomUUID(),
+                segments: structuredClone(parsedSegments),
+                output: generateHl7Message(parsedSegments),
+                copyButtonText: 'Copy to Clipboard'
+            };
+            setSerializations([firstInstance]);
+        } else {
+            setSerializations([]);
+        }
     }, [parsedSegments]);
 
-    // Generate the raw HL7 output from edited segments (live update)
-    const rawHl7Output = useMemo(() => {
-        if (editedSegments.length === 0) {
-            return currentTemplateContent;
-        }
-        return generateHl7Message(editedSegments);
-    }, [editedSegments, currentTemplateContent]);
 
-    // Check if template has any variables
+    // Check if template has any variables (basic or numbered HELPERVARIABLE1-999)
     const hasVariables = useMemo(() => {
-        return currentTemplateContent.includes('HELPERVARIABLE');
+        return /HELPERVARIABLE(?:\d{1,3})?/.test(currentTemplateContent);
     }, [currentTemplateContent]);
 
     const handleTemplateSelect = (id: string) => {
@@ -140,36 +152,118 @@ export default function UseTemplatePage() {
             setCurrentTemplateContent(template.content);
         } else {
             setCurrentTemplateContent('');
-            setEditedSegments([]);
         }
     };
 
-    // Handle segment updates from MessageEditor
-    const handleSegmentsUpdate = useCallback((newSegments: SegmentDto[]) => {
-        setEditedSegments(newSegments);
-    }, []);
 
-    const handleSerialize = () => {
-        // Save the generated HL7 to localStorage to pass to main page
-        localStorage.setItem('generated_hl7', rawHl7Output);
-        router.push('/?loadGenerated=true');
+    // Add new serialization
+    const handleAddSerialization = () => {
+        const newInstance: SerializationInstance = {
+            id: crypto.randomUUID(),
+            segments: structuredClone(parsedSegments),
+            output: generateHl7Message(parsedSegments),
+            copyButtonText: 'Copy to Clipboard'
+        };
+
+        setSerializations(prev => [...prev, newInstance]);
+
+        // Scroll to new serialization
+        setTimeout(() => {
+            const element = document.querySelector(`[data-testid="serialization-block-${newInstance.id}"]`);
+            element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     };
 
-    const handleCopyToClipboard = async () => {
+    // Remove serialization
+    const handleRemoveSerialization = (id: string) => {
+        setSerializations(prev => prev.filter(s => s.id !== id));
+    };
+
+
+    // Copy individual serialization to clipboard
+    const handleCopySerializationToClipboard = async (id: string) => {
+        const instance = serializations.find(s => s.id === id);
+        if (!instance) return;
+
         try {
-            await navigator.clipboard.writeText(rawHl7Output);
-            setCopyButtonText('Copied!');
+            await navigator.clipboard.writeText(instance.output);
+            setSerializations(prev => prev.map(s =>
+                s.id === id
+                    ? { ...s, copyButtonText: 'Copied!' }
+                    : s
+            ));
             setTimeout(() => {
-                setCopyButtonText('Copy to Clipboard');
+                setSerializations(prev => prev.map(s =>
+                    s.id === id
+                        ? { ...s, copyButtonText: 'Copy to Clipboard' }
+                        : s
+                ));
             }, 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
-            setCopyButtonText('Failed to copy');
+            setSerializations(prev => prev.map(s =>
+                s.id === id
+                    ? { ...s, copyButtonText: 'Failed to copy' }
+                    : s
+            ));
             setTimeout(() => {
-                setCopyButtonText('Copy to Clipboard');
+                setSerializations(prev => prev.map(s =>
+                    s.id === id
+                        ? { ...s, copyButtonText: 'Copy to Clipboard' }
+                        : s
+                ));
             }, 2000);
         }
     };
+
+    const handleSerialize = () => {
+        // Save all serializations to localStorage
+        const allOutputs = serializations.map(s => s.output).join('\n\n---\n\n');
+        localStorage.setItem('generated_hl7', allOutputs);
+        router.push('/?loadGenerated=true');
+    };
+
+    // Get filtered segments for a specific serialization (variables only)
+    const getFilteredSegments = useCallback((segments: SegmentDto[]) => {
+        return segments
+            .map(s => ({
+                ...s,
+                fields: s.fields.filter(f => fieldContainsVariable(f))
+            }))
+            .filter(s => s.fields.length > 0);
+    }, []);
+
+    // Create update handler for a specific serialization
+    const createUpdateHandler = useCallback((serializationId: string) => {
+        return (newSegments: SegmentDto[]) => {
+            setSerializations(prevSerializations =>
+                prevSerializations.map(s => {
+                    if (s.id !== serializationId) return s;
+
+                    // Merge the filtered segments back into the full segments
+                    const fullSegments = s.segments.map(fullSeg => {
+                        const updatedSeg = newSegments.find(ns => ns.id === fullSeg.id);
+                        if (!updatedSeg) return fullSeg;
+
+                        return {
+                            ...fullSeg,
+                            fields: fullSeg.fields.map(fullField => {
+                                const updatedField = updatedSeg.fields.find(uf => uf.position === fullField.position);
+                                if (!updatedField) return fullField;
+                                return updatedField;
+                            })
+                        };
+                    });
+
+                    return {
+                        ...s,
+                        segments: fullSegments,
+                        output: generateHl7Message(fullSegments)
+                    };
+                })
+            );
+        };
+    }, []);
 
     return (
         <main className="min-h-screen bg-background font-sans transition-colors text-foreground">
@@ -180,7 +274,7 @@ export default function UseTemplatePage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+            <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
                 {/* Error Display */}
                 {error && (
@@ -196,134 +290,161 @@ export default function UseTemplatePage() {
 
                 <h2 className="text-2xl font-bold text-foreground">Serialize from Template</h2>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column: Template Selection & Raw HL7 Output */}
+                {/* Template Selection - Full Width */}
+                <div className="bg-card p-6 rounded-lg shadow border border-border space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-card-foreground mb-1">Select Template</label>
+                        <select
+                            value={selectedTemplateId}
+                            onChange={(e) => handleTemplateSelect(e.target.value)}
+                            data-testid="template-select"
+                            disabled={isLoading}
+                            className="w-full p-2 border border-input rounded bg-background text-foreground focus:ring-2 focus:ring-ring outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <option value="">{isLoading ? '-- Loading templates... --' : '-- Choose a template --'}</option>
+                            {templates.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedTemplateId && (
+                        <div>
+                            <label className="block text-sm font-medium text-card-foreground mb-1">
+                                Raw Template
+                                {hasVariables && (
+                                    <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
+                                        (HELPERVARIABLE placeholders highlighted)
+                                    </span>
+                                )}
+                            </label>
+                            <div
+                                className="w-full max-h-64 p-4 border border-input rounded-md font-mono text-sm bg-muted text-muted-foreground overflow-auto whitespace-pre-wrap"
+                                data-testid="raw-hl7-template"
+                            >
+                                {highlightVariablesInText(currentTemplateContent.replace(/\r/g, '\n'))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Serialization Pairs */}
+                {selectedTemplateId && serializations.length > 0 && (
                     <div className="space-y-4">
-                        <div className="bg-card p-6 rounded-lg shadow border border-border space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-card-foreground mb-1">Select Template</label>
-                                <select
-                                    value={selectedTemplateId}
-                                    onChange={(e) => handleTemplateSelect(e.target.value)}
-                                    data-testid="template-select"
-                                    disabled={isLoading}
-                                    className="w-full p-2 border border-input rounded bg-background text-foreground focus:ring-2 focus:ring-ring outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="">{isLoading ? '-- Loading templates... --' : '-- Choose a template --'}</option>
-                                    {templates.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-card-foreground mb-1">
-                                    Raw HL7 Output
-                                    {hasVariables && (
-                                        <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
-                                            (HELPERVARIABLE placeholders highlighted)
-                                        </span>
-                                    )}
-                                </label>
-                                <div
-                                    className="w-full h-96 p-4 border border-input rounded-md font-mono text-sm bg-muted text-muted-foreground overflow-auto whitespace-pre-wrap"
-                                    data-testid="raw-hl7-output"
-                                >
-                                    {selectedTemplateId
-                                        ? highlightVariablesInText(currentTemplateContent.replace(/\r/g, '\n'))
-                                        : <span className="text-muted-foreground italic">Select a template to view its content...</span>
-                                    }
+                        {serializations.map((ser, index) => (
+                            <div
+                                key={ser.id}
+                                data-testid={`serialization-pair-${ser.id}`}
+                                className="bg-card rounded-lg shadow border border-border overflow-hidden"
+                            >
+                                {/* Pair Header */}
+                                <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
+                                    <span className="text-sm font-semibold text-foreground">
+                                        Serialization #{index + 1}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleCopySerializationToClipboard(ser.id)}
+                                            data-testid={`copy-button-${ser.id}`}
+                                            aria-label="Copy serialization to clipboard"
+                                            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                                        >
+                                            {ser.copyButtonText}
+                                        </button>
+                                        {index > 0 && (
+                                            <button
+                                                onClick={() => handleRemoveSerialization(ser.id)}
+                                                data-testid={`remove-serialization-${ser.id}`}
+                                                aria-label="Remove serialization"
+                                                className="px-3 py-1 text-xs bg-destructive text-destructive-foreground rounded hover:bg-destructive/80 transition-colors"
+                                            >
+                                                ✕ Remove
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="block text-sm font-medium text-card-foreground">
-                                        Serialized Output
-                                        {hasVariables && (
+                                {/* Pair Content: Output (left) + Editor (right) */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
+                                    {/* Left: Serialized Output */}
+                                    <div className="p-4 space-y-2">
+                                        <label className="block text-sm font-medium text-muted-foreground">
+                                            Serialized Output
                                             <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-normal">
                                                 (Variables replaced)
                                             </span>
-                                        )}
-                                    </label>
-                                    {selectedTemplateId && rawHl7Output && (
-                                        <button
-                                            onClick={handleCopyToClipboard}
-                                            data-testid="copy-button"
-                                            aria-label="Copy serialized HL7 to clipboard"
-                                            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                                        </label>
+                                        <div
+                                            className="w-full h-64 p-3 border border-input rounded-md font-mono text-xs bg-background text-foreground overflow-auto whitespace-pre-wrap"
+                                            data-testid={`serialization-output-${ser.id}`}
                                         >
-                                            {copyButtonText}
-                                        </button>
-                                    )}
-                                </div>
-                                <div
-                                    className="w-full h-64 p-4 border border-input rounded-md font-mono text-sm bg-background text-foreground overflow-auto whitespace-pre-wrap"
-                                    data-testid="serialized-output"
-                                >
-                                    {selectedTemplateId
-                                        ? rawHl7Output.replace(/\r/g, '\n')
-                                        : <span className="text-muted-foreground italic">Select a template to view serialized output...</span>
-                                    }
+                                            {ser.output.replace(/\r/g, '\n')}
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Variables Editor */}
+                                    <div className="p-4 space-y-2">
+                                        <label className="block text-sm font-medium text-muted-foreground">
+                                            Edit Variables
+                                            {hasVariables ? (
+                                                <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
+                                                    (Fill in values below)
+                                                </span>
+                                            ) : (
+                                                <span className="ml-2 text-xs text-muted-foreground font-normal italic">
+                                                    No variables in template
+                                                </span>
+                                            )}
+                                        </label>
+                                        <div className="h-64 overflow-auto border border-border rounded-lg">
+                                            <MessageEditor
+                                                segments={getFilteredSegments(ser.segments)}
+                                                onUpdate={createUpdateHandler(ser.id)}
+                                                highlightVariable={true}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        ))}
 
-                            {/* Action Buttons */}
-                            {selectedTemplateId && (
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                                    <button
-                                        onClick={() => router.push('/')}
-                                        data-testid="cancel-button"
-                                        className="px-4 py-2 bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSerialize}
-                                        data-testid="serialize-button"
-                                        className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                                    >
-                                        Serialize & Load
-                                    </button>
-                                </div>
-                            )}
+                        {/* Add Serialization Button - Full Width */}
+                        <button
+                            onClick={handleAddSerialization}
+                            data-testid="add-serialization-button"
+                            className="w-full py-3 border-2 border-dashed border-border rounded-lg text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+                        >
+                            + Add Serialization
+                        </button>
+
+                        {/* Action Buttons - Full Width */}
+                        <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                            <button
+                                onClick={() => router.push('/')}
+                                data-testid="cancel-button"
+                                className="px-4 py-2 bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSerialize}
+                                data-testid="serialize-button"
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                                Serialize & Load
+                            </button>
                         </div>
                     </div>
+                )}
 
-                    {/* Right Column: Parsed Structure View */}
-                    <div className="space-y-4">
-                        {selectedTemplateId ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="block text-sm font-medium text-card-foreground">
-                                        Parsed Structure View
-                                        {hasVariables && (
-                                            <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
-                                                (Edit highlighted fields)
-                                            </span>
-                                        )}
-                                    </label>
-                                    {!hasVariables && (
-                                        <span className="text-xs text-muted-foreground italic">
-                                            No HELPERVARIABLE placeholders - all fields read-only
-                                        </span>
-                                    )}
-                                </div>
-                                <MessageEditor
-                                    segments={editedSegments}
-                                    onUpdate={handleSegmentsUpdate}
-                                    highlightVariable={true}
-                                />
-                            </div>
-                        ) : (
-                            <div className="bg-card p-6 rounded-lg shadow border border-border h-full flex items-center justify-center min-h-[400px]">
-                                <p className="text-muted-foreground">
-                                    Please select a template from the left to view its structure.
-                                </p>
-                            </div>
-                        )}
+                {/* Empty State */}
+                {!selectedTemplateId && (
+                    <div className="bg-card p-12 rounded-lg shadow border border-border flex items-center justify-center">
+                        <p className="text-muted-foreground text-center">
+                            Select a template above to start creating serializations.
+                        </p>
                     </div>
-                </div>
+                )}
             </div>
         </main>
     );

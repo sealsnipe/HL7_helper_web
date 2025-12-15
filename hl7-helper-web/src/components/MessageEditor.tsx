@@ -7,6 +7,8 @@ interface Props {
     segments: SegmentDto[];
     onUpdate: (segments: SegmentDto[]) => void;
     highlightVariable?: boolean;
+    // Filter to show only variable-containing fields (for display only, updates use full data)
+    filterVariablesOnly?: boolean;
     // Linked variable support
     variableValues?: Map<string, string>;
     onVariableChange?: (variableId: string, value: string) => void;
