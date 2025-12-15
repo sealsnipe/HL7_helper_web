@@ -37,7 +37,7 @@ yarn-error.log*
 .vercel/
 
 # HL7 Helper Specific
-templates/
+/templates/
 *.hl7
 
 # Logs and Temporary Files
