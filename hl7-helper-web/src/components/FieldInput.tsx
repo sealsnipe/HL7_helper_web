@@ -15,7 +15,7 @@ const containsVariable = (value: string): boolean => {
     return value.includes('HELPERVARIABLE');
 };
 
-export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highlightVariable = false, variableOnlyEditing = false }) => {
+export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highlightVariable = false, variableOnlyEditing: _variableOnlyEditing = false }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     // Check if this field or any of its components contains HELPERVARIABLE
@@ -32,10 +32,10 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highl
         ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20'
         : '';
 
-    // Compute effective editability: if variableOnlyEditing is true, only fields with variables are editable
-    const effectiveIsEditable = variableOnlyEditing
-        ? field.isEditable && fieldHasVariable
-        : field.isEditable;
+    // Use the isEditable flag set by applyVariableEditability() at template load time
+    // Don't re-check fieldHasVariable here - the flag is the source of truth
+    // This allows users to edit the field even after replacing HELPERVARIABLE
+    const effectiveIsEditable = field.isEditable;
 
     // Helper to render a single input with proper accessibility and test attributes
     const renderInput = (label: string, value: string, isEditable: boolean, onChangeVal: (v: string) => void, key: string, description?: string) => {

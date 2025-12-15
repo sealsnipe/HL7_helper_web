@@ -72,6 +72,7 @@ export default function UseTemplatePage() {
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
     const [currentTemplateContent, setCurrentTemplateContent] = useState('');
     const [editedSegments, setEditedSegments] = useState<SegmentDto[]>([]);
+    const [copyButtonText, setCopyButtonText] = useState('Copy to Clipboard');
 
     // Load templates from localStorage on client-side only
     useEffect(() => {
@@ -134,6 +135,22 @@ export default function UseTemplatePage() {
         router.push('/?loadGenerated=true');
     };
 
+    const handleCopyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(rawHl7Output);
+            setCopyButtonText('Copied!');
+            setTimeout(() => {
+                setCopyButtonText('Copy to Clipboard');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            setCopyButtonText('Failed to copy');
+            setTimeout(() => {
+                setCopyButtonText('Copy to Clipboard');
+            }, 2000);
+        }
+    };
+
     return (
         <main className="min-h-screen bg-background font-sans transition-colors text-foreground">
             {/* Sticky Header */}
@@ -180,8 +197,40 @@ export default function UseTemplatePage() {
                                     data-testid="raw-hl7-output"
                                 >
                                     {selectedTemplateId
-                                        ? highlightVariablesInText(rawHl7Output.replace(/\r/g, '\n'))
+                                        ? highlightVariablesInText(currentTemplateContent.replace(/\r/g, '\n'))
                                         : <span className="text-muted-foreground italic">Select a template to view its content...</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-sm font-medium text-card-foreground">
+                                        Serialized Output
+                                        {hasVariables && (
+                                            <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-normal">
+                                                (Variables replaced)
+                                            </span>
+                                        )}
+                                    </label>
+                                    {selectedTemplateId && rawHl7Output && (
+                                        <button
+                                            onClick={handleCopyToClipboard}
+                                            data-testid="copy-button"
+                                            aria-label="Copy serialized HL7 to clipboard"
+                                            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                                        >
+                                            {copyButtonText}
+                                        </button>
+                                    )}
+                                </div>
+                                <div
+                                    className="w-full h-64 p-4 border border-input rounded-md font-mono text-sm bg-background text-foreground overflow-auto whitespace-pre-wrap"
+                                    data-testid="serialized-output"
+                                >
+                                    {selectedTemplateId
+                                        ? rawHl7Output.replace(/\r/g, '\n')
+                                        : <span className="text-muted-foreground italic">Select a template to view serialized output...</span>
                                     }
                                 </div>
                             </div>
