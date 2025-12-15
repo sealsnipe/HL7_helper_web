@@ -1,4 +1,6 @@
 import { Template } from '@/types/template';
+import { getPersistenceService } from '@/services/persistence';
+import { StorageKey } from '@/types/persistence';
 
 /**
  * Type guard to validate a single Template object
@@ -28,38 +30,54 @@ function isValidTemplateArray(data: unknown): data is Template[] {
 }
 
 /**
- * Safely load templates from localStorage with validation
+ * Load templates from persistence storage
  * Returns empty array if data is invalid or missing
- * Clears corrupted data automatically
+ *
+ * @returns Promise resolving to array of templates
  */
-export function loadTemplatesFromStorage(): Template[] {
+export async function loadTemplatesFromStorage(): Promise<Template[]> {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
   try {
-    const stored = localStorage.getItem('hl7_templates');
-    if (!stored) return [];
+    const service = getPersistenceService();
+    const templates = await service.load<Template[]>(StorageKey.TEMPLATES);
 
-    const parsed: unknown = JSON.parse(stored);
-
-    if (!isValidTemplateArray(parsed)) {
-      console.warn('Invalid template data in localStorage, clearing...');
-      localStorage.removeItem('hl7_templates');
+    if (!templates) {
       return [];
     }
 
-    return parsed;
+    // Validate loaded data
+    if (!isValidTemplateArray(templates)) {
+      console.warn('Invalid template data in storage, clearing...');
+      await service.delete(StorageKey.TEMPLATES);
+      return [];
+    }
+
+    return templates;
   } catch (error) {
-    console.error('Failed to parse templates from localStorage:', error);
-    localStorage.removeItem('hl7_templates');
+    console.error('Failed to load templates from storage:', error);
     return [];
   }
 }
 
 /**
- * Safely save templates to localStorage
+ * Save templates to persistence storage
+ *
+ * @param templates - Array of templates to save
+ * @throws Error if save operation fails
  */
-export function saveTemplatesToStorage(templates: Template[]): void {
+export async function saveTemplatesToStorage(templates: Template[]): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   try {
-    localStorage.setItem('hl7_templates', JSON.stringify(templates));
+    const service = getPersistenceService();
+    await service.save(StorageKey.TEMPLATES, templates);
   } catch (error) {
-    console.error('Failed to save templates to localStorage:', error);
+    console.error('Failed to save templates to storage:', error);
+    throw error;
   }
 }

@@ -11,6 +11,7 @@ import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
 import { loadTemplatesFromStorage } from '@/utils/templateValidation';
 import { applyVariableEditability } from '@/utils/templateHelpers';
+import { runMigrations } from '@/services/persistence/migrations';
 
 /**
  * Highlight HELPERVARIABLE placeholders in raw HL7 text
@@ -71,19 +72,38 @@ export default function UseTemplatePage() {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
     const [currentTemplateContent, setCurrentTemplateContent] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const [editedSegments, setEditedSegments] = useState<SegmentDto[]>([]);
     const [copyButtonText, setCopyButtonText] = useState('Copy to Clipboard');
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Load templates from localStorage on client-side only
+    // Load templates from storage on client-side only
     useEffect(() => {
-        const customTemplates = loadTemplatesFromStorage();
-        const defaultTemplates = getDefaultTemplates();
+        async function loadData() {
+            setIsLoading(true);
+            try {
+                // Run migrations first
+                await runMigrations();
 
-        if (customTemplates.length > 0) {
-            setTemplates(customTemplates); // Use saved templates (includes defaults)
-        } else {
-            setTemplates(defaultTemplates); // Fresh defaults
+                // Load templates from storage
+                const customTemplates = await loadTemplatesFromStorage();
+                const defaultTemplates = getDefaultTemplates();
+
+                if (customTemplates.length > 0) {
+                    setTemplates(customTemplates); // Use saved templates (includes defaults)
+                } else {
+                    setTemplates(defaultTemplates); // Fresh defaults
+                }
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+                setError('Failed to load templates. Please refresh the page.');
+                setTemplates(getDefaultTemplates());
+            } finally {
+                setIsLoading(false);
+            }
         }
+
+        loadData();
     }, []);
 
     // Parse the template content and apply variable editability
@@ -162,6 +182,18 @@ export default function UseTemplatePage() {
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
+                {/* Error Display */}
+                {error && (
+                    <div
+                        role="alert"
+                        className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg"
+                        data-testid="error-message"
+                    >
+                        <p className="font-medium">Error</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                )}
+
                 <h2 className="text-2xl font-bold text-foreground">Serialize from Template</h2>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -174,9 +206,10 @@ export default function UseTemplatePage() {
                                     value={selectedTemplateId}
                                     onChange={(e) => handleTemplateSelect(e.target.value)}
                                     data-testid="template-select"
-                                    className="w-full p-2 border border-input rounded bg-background text-foreground focus:ring-2 focus:ring-ring outline-none"
+                                    disabled={isLoading}
+                                    className="w-full p-2 border border-input rounded bg-background text-foreground focus:ring-2 focus:ring-ring outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <option value="">-- Choose a template --</option>
+                                    <option value="">{isLoading ? '-- Loading templates... --' : '-- Choose a template --'}</option>
                                     {templates.map(t => (
                                         <option key={t.id} value={t.id}>{t.name}</option>
                                     ))}
@@ -280,7 +313,6 @@ export default function UseTemplatePage() {
                                     segments={editedSegments}
                                     onUpdate={handleSegmentsUpdate}
                                     highlightVariable={true}
-                                    variableOnlyEditing={true}
                                 />
                             </div>
                         ) : (

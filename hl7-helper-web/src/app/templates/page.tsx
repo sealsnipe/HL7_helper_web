@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Template } from '@/types/template';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
@@ -9,8 +9,10 @@ import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
 import { SegmentDto } from '@/types';
 import { loadTemplatesFromStorage, saveTemplatesToStorage } from '@/utils/templateValidation';
-import { fieldContainsVariable, getVariableCount } from '@/utils/templateHelpers';
+import { fieldContainsVariable, getVariableCount, getVariableBadgeColor, applyVariableEditability } from '@/utils/templateHelpers';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DataManagement } from '@/components/persistence';
+import { runMigrations } from '@/services/persistence/migrations';
 
 // View mode for HELPERVARIABLE filtering
 type VariableViewMode = 'all' | 'variables-only';
@@ -19,6 +21,7 @@ export default function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Edit state
     const [editName, setEditName] = useState('');
@@ -34,6 +37,17 @@ export default function TemplatesPage() {
 
     // Delete confirmation dialog state
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+
+    // Ref for scroll synchronization between textarea and highlight overlay
+    const highlightRef = useRef<HTMLDivElement>(null);
+
+    // Scroll synchronization handler
+    const handleHighlightScroll = useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
+        if (highlightRef.current) {
+            highlightRef.current.scrollTop = e.currentTarget.scrollTop;
+            highlightRef.current.scrollLeft = e.currentTarget.scrollLeft;
+        }
+    }, []);
 
     /**
      * Extract message type from HL7 content (MSH-9 field)
@@ -52,24 +66,64 @@ export default function TemplatesPage() {
         return 'UNKNOWN';
     };
 
-    const loadTemplates = useCallback(() => {
-        const customTemplates = loadTemplatesFromStorage();
+    /**
+     * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors
+     */
+    const highlightVariablesInText = (text: string): React.ReactNode => {
+        if (!text) return null;
 
-        if (customTemplates.length === 0) {
-            // No valid templates found, create defaults
-            const timestamp = Date.now();
-            const defaultTemplates: Template[] = Object.entries(SAMPLE_TEMPLATES).map(([name, content], idx) => ({
-                id: `default-${idx}`,
-                name,
-                description: "Standard Example",
-                messageType: extractMessageType(content),
-                content,
-                createdAt: timestamp
-            }));
-            saveTemplatesToStorage(defaultTemplates);
-            setTemplates(defaultTemplates);
-        } else {
-            setTemplates(customTemplates);
+        // Normalize line endings: HL7 uses \r but CSS whitespace-pre-wrap needs \n for line breaks
+        const normalizedText = text.replace(/\r\n?/g, '\n');
+
+        // Split on any HELPERVARIABLE with optional number (1-999)
+        const parts = normalizedText.split(/(HELPERVARIABLE[1-9]\d{0,2}|HELPERVARIABLE(?!\d))/g);
+        return parts.map((part, index) => {
+            const match = part.match(/^HELPERVARIABLE([1-9]\d{0,2})?$/);
+            if (match) {
+                const groupId = match[1] ? parseInt(match[1], 10) : undefined;
+                const colorClass = getVariableBadgeColor(groupId);
+                return (
+                    <span
+                        key={index}
+                        className={`${colorClass} px-1 rounded font-bold`}
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
+    const loadTemplates = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // Run migrations first
+            await runMigrations();
+
+            // Load templates from storage
+            const customTemplates = await loadTemplatesFromStorage();
+
+            if (customTemplates.length === 0) {
+                // No valid templates found, create defaults
+                const timestamp = Date.now();
+                const defaultTemplates: Template[] = Object.entries(SAMPLE_TEMPLATES).map(([name, content], idx) => ({
+                    id: `default-${idx}`,
+                    name,
+                    description: "Standard Example",
+                    messageType: extractMessageType(content),
+                    content,
+                    createdAt: timestamp
+                }));
+                await saveTemplatesToStorage(defaultTemplates);
+                setTemplates(defaultTemplates);
+            } else {
+                setTemplates(customTemplates);
+            }
+        } catch (error) {
+            console.error('Failed to load templates:', error);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
@@ -78,14 +132,17 @@ export default function TemplatesPage() {
     }, [loadTemplates]);
 
     // Parse content when it changes (for expanded view)
+    // Apply variable editability to set variableId and variableGroupId for badge display
     useEffect(() => {
         if (expandedId) {
             if (editingId) {
-                setSegments(parseHl7Message(editContent));
+                const parsed = parseHl7Message(editContent);
+                setSegments(applyVariableEditability(parsed));
             } else {
                 const template = templates.find(t => t.id === expandedId);
                 if (template) {
-                    setSegments(parseHl7Message(template.content));
+                    const parsed = parseHl7Message(template.content);
+                    setSegments(applyVariableEditability(parsed));
                 }
             }
         } else {
@@ -108,7 +165,7 @@ export default function TemplatesPage() {
         }
     };
 
-    const handleCreate = () => {
+    const handleCreate = async () => {
         const newId = crypto.randomUUID();
         const newTemplate: Template = {
             id: newId,
@@ -116,13 +173,12 @@ export default function TemplatesPage() {
             description: '',
             messageType: 'ADT-A01',
             content: 'MSH|^~\\&|App|Fac|App|Fac|20230101||ADT^A01|MSGID|P|2.5\rPID|1||12345^^^MRN||Doe^John',
-            // eslint-disable-next-line react-hooks/purity
             createdAt: Date.now()
         };
 
         const updated = [...templates, newTemplate];
         setTemplates(updated);
-        saveTemplatesToStorage(updated);
+        await saveTemplatesToStorage(updated);
 
         // Auto expand and edit
         setExpandedId(newId);
@@ -147,7 +203,7 @@ export default function TemplatesPage() {
         setExpandedId(null); // Collapse on cancel as per requirements
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingId) return;
 
         const updatedTemplates = templates.map(t => {
@@ -164,7 +220,7 @@ export default function TemplatesPage() {
         });
 
         setTemplates(updatedTemplates);
-        saveTemplatesToStorage(updatedTemplates);
+        await saveTemplatesToStorage(updatedTemplates);
         setEditingId(null);
         // Keep expanded to show result? Or collapse?
         // User requirement: "Changes in edit mode should only be saved when the user explicitly clicks 'Save'."
@@ -176,11 +232,11 @@ export default function TemplatesPage() {
         setDeleteConfirm({ id: template.id, name: template.name });
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (!deleteConfirm) return;
         const updated = templates.filter(t => t.id !== deleteConfirm.id);
         setTemplates(updated);
-        saveTemplatesToStorage(updated);
+        await saveTemplatesToStorage(updated);
         if (expandedId === deleteConfirm.id) setExpandedId(null);
         setDeleteConfirm(null);
     };
@@ -189,7 +245,7 @@ export default function TemplatesPage() {
         setDeleteConfirm(null);
     };
 
-    const handleDuplicate = (e: React.MouseEvent, template: Template) => {
+    const handleDuplicate = async (e: React.MouseEvent, template: Template) => {
         e.stopPropagation();
         const newId = crypto.randomUUID();
 
@@ -212,7 +268,7 @@ export default function TemplatesPage() {
 
         const updated = [...templates, newTemplate];
         setTemplates(updated);
-        saveTemplatesToStorage(updated);
+        await saveTemplatesToStorage(updated);
 
         setExpandedId(newId);
         startEditing(newTemplate);
@@ -293,7 +349,14 @@ export default function TemplatesPage() {
                     </div>
 
                     <div className="divide-y divide-border">
-                        {templates.length === 0 ? (
+                        {isLoading ? (
+                            <div className="p-8 text-center text-muted-foreground">
+                                <div className="flex items-center justify-center gap-2">
+                                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                    <span>Loading templates...</span>
+                                </div>
+                            </div>
+                        ) : templates.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground">
                                 No templates found. Create one to get started.
                             </div>
@@ -384,27 +447,21 @@ export default function TemplatesPage() {
                                                             <label className="text-sm font-medium">Raw HL7 Message</label>
                                                             {/* Highlighted textarea with overlay */}
                                                             <div className="relative flex-1">
-                                                                {/* Background highlighting layer */}
+                                                                {/* Background highlighting layer - shows colored HELPERVARIABLE placeholders */}
                                                                 <div
-                                                                    className="absolute inset-0 p-4 font-mono text-sm overflow-auto whitespace-pre-wrap pointer-events-none text-transparent border border-transparent rounded-md"
+                                                                    ref={highlightRef}
+                                                                    className="absolute inset-0 p-4 font-mono text-sm overflow-hidden whitespace-pre-wrap pointer-events-none border border-transparent rounded-md select-none"
                                                                     aria-hidden="true"
                                                                 >
-                                                                    {editContent.split(/(HELPERVARIABLE)/g).map((part, idx) => (
-                                                                        part === 'HELPERVARIABLE' ? (
-                                                                            <span key={idx} className="bg-amber-200 dark:bg-amber-700 rounded">
-                                                                                {part}
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span key={idx}>{part}</span>
-                                                                        )
-                                                                    ))}
+                                                                    {highlightVariablesInText(editContent)}
                                                                 </div>
-                                                                {/* Actual textarea */}
+                                                                {/* Actual textarea - transparent text so highlights show through */}
                                                                 <textarea
                                                                     value={editContent}
                                                                     onChange={(e) => setEditContent(e.target.value)}
-                                                                    className="absolute inset-0 w-full h-full p-4 border border-input rounded-md font-mono text-sm bg-transparent focus:ring-2 focus:ring-ring outline-none resize-none caret-foreground text-foreground"
-                                                                    style={{ caretColor: 'currentColor' }}
+                                                                    onScroll={handleHighlightScroll}
+                                                                    className="absolute inset-0 w-full h-full p-4 border border-input rounded-md font-mono text-sm bg-transparent focus:ring-2 focus:ring-ring outline-none resize-none caret-foreground text-transparent"
+                                                                    style={{ caretColor: 'var(--foreground)' }}
                                                                     data-testid="edit-content-textarea"
                                                                 />
                                                             </div>
@@ -440,7 +497,7 @@ export default function TemplatesPage() {
                                                                 <MessageEditor
                                                                     segments={displaySegments}
                                                                     onUpdate={handleEditorUpdate}
-                                                                    highlightVariable={variableViewMode === 'all'}
+                                                                    highlightVariable={true}
                                                                 />
                                                             </div>
                                                         </div>
@@ -469,15 +526,7 @@ export default function TemplatesPage() {
                                                         <label className="text-sm font-medium text-muted-foreground">Raw HL7 Message</label>
                                                         {/* Highlighted raw content with HELPERVARIABLE markers */}
                                                         <div className="w-full flex-1 p-4 border border-border rounded bg-muted font-mono text-sm overflow-auto whitespace-pre-wrap">
-                                                            {template.content.split(/(HELPERVARIABLE)/g).map((part, idx) => (
-                                                                part === 'HELPERVARIABLE' ? (
-                                                                    <span key={idx} className="bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100 px-0.5 rounded font-semibold">
-                                                                        {part}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span key={idx}>{part}</span>
-                                                                )
-                                                            ))}
+                                                            {highlightVariablesInText(template.content)}
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col space-y-2 h-full overflow-hidden">
@@ -514,7 +563,7 @@ export default function TemplatesPage() {
                                                             <MessageEditor
                                                                 segments={displaySegments}
                                                                 onUpdate={() => { }}
-                                                                highlightVariable={variableViewMode === 'all'}
+                                                                highlightVariable={true}
                                                             />
                                                         </div>
                                                     </div>
@@ -526,6 +575,11 @@ export default function TemplatesPage() {
                             ))
                         )}
                     </div>
+                </div>
+
+                {/* Data Management Section */}
+                <div className="bg-card rounded-lg shadow border border-border overflow-hidden">
+                    <DataManagement />
                 </div>
             </div>
 
