@@ -10,6 +10,9 @@ export interface FieldDto {
     isEditable: boolean;
     components: ComponentDto[];
     repetitions?: FieldDto[];
+    // Linked variable support
+    variableId?: string;       // e.g., "HELPERVARIABLE1" or "HELPERVARIABLE"
+    variableGroupId?: number;  // undefined for standalone, 1-999 for linked groups
 }
 
 export interface SegmentDto {

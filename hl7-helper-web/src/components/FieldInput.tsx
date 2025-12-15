@@ -1,41 +1,72 @@
 
 import React from 'react';
 import { FieldDto, FieldDefinition } from '@/types';
+import { getVariableGroupColor, getVariableBadgeColor, containsAnyVariable } from '@/utils/templateHelpers';
 
 interface Props {
     field: FieldDto;
     definition: FieldDefinition | null;
     onChange: (value: string) => void;
     highlightVariable?: boolean;
-    variableOnlyEditing?: boolean;
+    // Linked variable support
+    variableValues?: Map<string, string>;
+    onVariableChange?: (variableId: string, value: string) => void;
 }
 
-// Helper to check if a value contains HELPERVARIABLE
-const containsVariable = (value: string): boolean => {
-    return value.includes('HELPERVARIABLE');
-};
-
-export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highlightVariable = false, variableOnlyEditing: _variableOnlyEditing = false }) => {
+export const FieldInput: React.FC<Props> = ({
+    field,
+    definition,
+    onChange,
+    highlightVariable = false,
+    variableValues,
+    onVariableChange
+}) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     // Check if this field or any of its components contains HELPERVARIABLE
     const fieldHasVariable = React.useMemo(() => {
-        if (containsVariable(field.value)) return true;
-        if (field.components?.some(c => containsVariable(c.value))) return true;
-        if (field.components?.some(c => c.subComponents?.some(s => containsVariable(s.value)))) return true;
-        if (field.repetitions?.some(r => containsVariable(r.value))) return true;
+        if (containsAnyVariable(field.value)) return true;
+        if (field.components?.some(c => containsAnyVariable(c.value))) return true;
+        if (field.components?.some(c => c.subComponents?.some(s => containsAnyVariable(s.value)))) return true;
+        if (field.repetitions?.some(r => containsAnyVariable(r.value))) return true;
         return false;
     }, [field]);
 
-    // Highlight class for fields containing HELPERVARIABLE
-    const highlightClass = highlightVariable && fieldHasVariable
-        ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20'
-        : '';
+    // Get display value - use variableValues map if available
+    const displayValue = React.useMemo(() => {
+        if (field.variableId && variableValues) {
+            return variableValues.get(field.variableId) ?? field.value;
+        }
+        return field.value;
+    }, [field.variableId, field.value, variableValues]);
+
+    // Highlight class for fields containing HELPERVARIABLE - now supports grouped colors
+    const highlightClass = React.useMemo(() => {
+        if (!highlightVariable || !field.isEditable) return '';
+        // Use group-based color if field has variableId
+        if (field.variableId) {
+            return getVariableGroupColor(field.variableGroupId);
+        }
+        // Fallback for fields that contain variable but don't have variableId set
+        if (fieldHasVariable) {
+            return 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20';
+        }
+        return '';
+    }, [highlightVariable, field.isEditable, field.variableId, field.variableGroupId, fieldHasVariable]);
 
     // Use the isEditable flag set by applyVariableEditability() at template load time
     // Don't re-check fieldHasVariable here - the flag is the source of truth
     // This allows users to edit the field even after replacing HELPERVARIABLE
     const effectiveIsEditable = field.isEditable;
+
+    // Handle value change - use onVariableChange for linked variables
+    const handleValueChange = React.useCallback((newValue: string) => {
+        if (field.variableId && onVariableChange) {
+            onVariableChange(field.variableId, newValue);
+        } else {
+            onChange(newValue);
+        }
+    }, [field.variableId, onVariableChange, onChange]);
 
     // Helper to render a single input with proper accessibility and test attributes
     const renderInput = (label: string, value: string, isEditable: boolean, onChangeVal: (v: string) => void, key: string, description?: string) => {
@@ -277,11 +308,20 @@ export const FieldInput: React.FC<Props> = ({ field, definition, onChange, highl
     // Simple field without components or repetitions
     return (
         <div className={highlightClass ? `rounded ${highlightClass}` : ''}>
+            {/* Visual badge for linked variables */}
+            {field.variableGroupId !== undefined && (
+                <div className="flex items-center gap-1 mb-1">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${getVariableBadgeColor(field.variableGroupId)}`}>
+                        V{field.variableGroupId}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">Linked variable</span>
+                </div>
+            )}
             {renderInput(
                 `${field.position}`,
-                field.value,
+                displayValue,
                 effectiveIsEditable,
-                onChange,
+                handleValueChange,
                 `${field.position}`,
                 definition?.description
             )}

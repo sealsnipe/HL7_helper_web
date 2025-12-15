@@ -7,10 +7,18 @@ interface Props {
     segments: SegmentDto[];
     onUpdate: (segments: SegmentDto[]) => void;
     highlightVariable?: boolean;
-    variableOnlyEditing?: boolean; // When true, only fields containing HELPERVARIABLE are editable
+    // Linked variable support
+    variableValues?: Map<string, string>;
+    onVariableChange?: (variableId: string, value: string) => void;
 }
 
-export const MessageEditor: React.FC<Props> = ({ segments, onUpdate, highlightVariable = false, variableOnlyEditing = false }) => {
+export const MessageEditor: React.FC<Props> = ({
+    segments,
+    onUpdate,
+    highlightVariable = false,
+    variableValues,
+    onVariableChange
+}) => {
     // State to track expanded segments by index
     const [expandedIndices, setExpandedIndices] = React.useState<Set<number>>(new Set());
 
@@ -108,7 +116,8 @@ export const MessageEditor: React.FC<Props> = ({ segments, onUpdate, highlightVa
                         onToggle={() => toggleSegment(index)}
                         onFieldChange={(fieldIndex, val) => handleFieldChange(index, fieldIndex, val)}
                         highlightVariable={highlightVariable}
-                        variableOnlyEditing={variableOnlyEditing}
+                        variableValues={variableValues}
+                        onVariableChange={onVariableChange}
                     />
                 ))}
             </div>
