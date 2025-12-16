@@ -108,7 +108,7 @@ describe('ConfirmDialog', () => {
     render(<ConfirmDialog {...defaultProps} variant="destructive" />);
 
     const confirmButton = screen.getByTestId('confirm-dialog-confirm');
-    expect(confirmButton).toHaveClass('bg-red-600');
+    expect(confirmButton).toHaveClass('bg-destructive');
   });
 
   // PROOF: Catches visual bug where default variant doesn't have green button

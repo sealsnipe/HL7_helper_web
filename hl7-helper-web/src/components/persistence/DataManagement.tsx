@@ -10,7 +10,7 @@ export function DataManagement() {
 
   return (
     <div
-      className="p-4 border rounded-lg bg-white dark:bg-gray-800"
+      className="p-4 border rounded-lg bg-card"
       data-testid="data-management"
       role="region"
       aria-labelledby="data-management-heading"

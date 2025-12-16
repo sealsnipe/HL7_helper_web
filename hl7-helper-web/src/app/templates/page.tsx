@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Template } from '@/types/template';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
@@ -38,17 +38,6 @@ export default function TemplatesPage() {
     // Delete confirmation dialog state
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-    // Ref for scroll synchronization between textarea and highlight overlay
-    const highlightRef = useRef<HTMLDivElement>(null);
-
-    // Scroll synchronization handler
-    const handleHighlightScroll = useCallback((e: React.UIEvent<HTMLTextAreaElement>) => {
-        if (highlightRef.current) {
-            highlightRef.current.scrollTop = e.currentTarget.scrollTop;
-            highlightRef.current.scrollLeft = e.currentTarget.scrollLeft;
-        }
-    }, []);
-
     /**
      * Extract message type from HL7 content (MSH-9 field)
      */
@@ -68,6 +57,9 @@ export default function TemplatesPage() {
 
     /**
      * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors
+     * Used for read-only display (not for editable textareas to avoid cursor issues)
+     *
+     * @param text - The HL7 text to highlight
      */
     const highlightVariablesInText = (text: string): React.ReactNode => {
         if (!text) return null;
@@ -82,6 +74,7 @@ export default function TemplatesPage() {
             if (match) {
                 const groupId = match[1] ? parseInt(match[1], 10) : undefined;
                 const colorClass = getVariableBadgeColor(groupId);
+
                 return (
                     <span
                         key={index}
@@ -445,26 +438,14 @@ export default function TemplatesPage() {
                                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
                                                         <div className="flex flex-col space-y-2 h-full">
                                                             <label className="text-sm font-medium">Raw HL7 Message</label>
-                                                            {/* Highlighted textarea with overlay */}
-                                                            <div className="relative flex-1">
-                                                                {/* Background highlighting layer - shows colored HELPERVARIABLE placeholders */}
-                                                                <div
-                                                                    ref={highlightRef}
-                                                                    className="absolute inset-0 p-4 font-mono text-sm overflow-hidden whitespace-pre-wrap pointer-events-none border border-transparent rounded-md select-none"
-                                                                    aria-hidden="true"
-                                                                >
-                                                                    {highlightVariablesInText(editContent)}
-                                                                </div>
-                                                                {/* Actual textarea - transparent text so highlights show through */}
-                                                                <textarea
-                                                                    value={editContent}
-                                                                    onChange={(e) => setEditContent(e.target.value)}
-                                                                    onScroll={handleHighlightScroll}
-                                                                    className="absolute inset-0 w-full h-full p-4 border border-input rounded-md font-mono text-sm bg-transparent focus:ring-2 focus:ring-ring outline-none resize-none caret-foreground text-transparent"
-                                                                    style={{ caretColor: 'var(--foreground)' }}
-                                                                    data-testid="edit-content-textarea"
-                                                                />
-                                                            </div>
+                                                            {/* Plain textarea without overlay - cursor position accuracy is critical */}
+                                                            {/* HELPERVARIABLE highlighting is shown in the Structured View on the right */}
+                                                            <textarea
+                                                                value={editContent}
+                                                                onChange={(e) => setEditContent(e.target.value)}
+                                                                className="flex-1 w-full p-4 border border-input rounded-md font-mono text-sm bg-background focus:ring-2 focus:ring-ring outline-none resize-none"
+                                                                data-testid="edit-content-textarea"
+                                                            />
                                                         </div>
                                                         <div className="flex flex-col space-y-2 h-full overflow-hidden">
                                                             <div className="flex items-center justify-between">

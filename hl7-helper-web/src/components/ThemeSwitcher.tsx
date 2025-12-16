@@ -52,14 +52,14 @@ export function ThemeSwitcher() {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700"
+                className="p-2 rounded-md hover:bg-muted transition-colors border border-border"
                 aria-label="Toggle theme"
             >
                 <CurrentIcon className="h-5 w-5" />
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-popover rounded-md shadow-lg border border-border py-1 z-50">
                     {themes.map((t) => {
                         const Icon = t.icon;
                         return (
@@ -69,7 +69,7 @@ export function ThemeSwitcher() {
                                     setTheme(t.name);
                                     setIsOpen(false);
                                 }}
-                                className={`flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 ${theme === t.name ? "text-blue-600 font-medium" : "text-gray-700 dark:text-gray-200"
+                                className={`flex items-center w-full px-4 py-2 text-sm text-left hover:bg-muted ${theme === t.name ? "text-primary font-medium" : "text-popover-foreground"
                                     }`}
                             >
                                 <Icon className="mr-2 h-4 w-4" />

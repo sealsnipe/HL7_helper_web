@@ -3,14 +3,15 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Template } from '@/types/template';
-import { SegmentDto, SerializationInstance } from '@/types';
+import { SerializationInstance } from '@/types';
+import { UniqueVariable, createInstanceId, InstanceId } from '@/types/serialization';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { MessageEditor } from '@/components/MessageEditor';
+import { VariablesOnlyView } from '@/components/serialization/VariablesOnlyView';
 import { parseHl7Message } from '@/utils/hl7Parser';
-import { generateHl7Message } from '@/utils/hl7Generator';
 import { loadTemplatesFromStorage } from '@/utils/templateValidation';
-import { applyVariableEditability, fieldContainsVariable, getVariableBadgeColor } from '@/utils/templateHelpers';
+import { applyVariableEditability, getVariableBadgeColor } from '@/utils/templateHelpers';
+import { extractUniqueVariablesWithMetadata, computeInstanceOutput } from '@/utils/serializationHelpers';
 import { runMigrations } from '@/services/persistence/migrations';
 
 
@@ -124,20 +125,41 @@ export default function UseTemplatePage() {
         return applyVariableEditability(segments);
     }, [currentTemplateContent]);
 
+    // Extract unique variables from parsed segments
+    const uniqueVariables: UniqueVariable[] = useMemo(() => {
+        return extractUniqueVariablesWithMetadata(parsedSegments);
+    }, [parsedSegments]);
+
+    // Create initial variable values (placeholder -> placeholder)
+    const createInitialVariableValues = useCallback((): Record<string, string> => {
+        const values: Record<string, string> = {};
+        for (const v of uniqueVariables) {
+            values[v.variableId] = v.variableId; // Initialize with placeholder
+        }
+        return values;
+    }, [uniqueVariables]);
+
     // Initialize first serialization when template changes
     useEffect(() => {
         if (parsedSegments.length > 0) {
+            const instanceId = createInstanceId();
+            const initialVariableValues = createInitialVariableValues();
+            const initialOutput = computeInstanceOutput(
+                { id: instanceId, name: '', variableValues: initialVariableValues, createdAt: 0, isExpanded: true },
+                parsedSegments
+            );
             const firstInstance: SerializationInstance = {
-                id: crypto.randomUUID(),
+                id: instanceId,
                 segments: structuredClone(parsedSegments),
-                output: generateHl7Message(parsedSegments),
-                copyButtonText: 'Copy to Clipboard'
+                output: initialOutput.serializedHl7,
+                copyButtonText: 'Copy to Clipboard',
+                variableValues: initialVariableValues
             };
             setSerializations([firstInstance]);
         } else {
             setSerializations([]);
         }
-    }, [parsedSegments]);
+    }, [parsedSegments, createInitialVariableValues]);
 
 
     // Check if template has any variables (basic or numbered HELPERVARIABLE1-999)
@@ -158,11 +180,18 @@ export default function UseTemplatePage() {
 
     // Add new serialization
     const handleAddSerialization = () => {
+        const instanceId = createInstanceId();
+        const initialVariableValues = createInitialVariableValues();
+        const initialOutput = computeInstanceOutput(
+            { id: instanceId, name: '', variableValues: initialVariableValues, createdAt: 0, isExpanded: true },
+            parsedSegments
+        );
         const newInstance: SerializationInstance = {
-            id: crypto.randomUUID(),
+            id: instanceId,
             segments: structuredClone(parsedSegments),
-            output: generateHl7Message(parsedSegments),
-            copyButtonText: 'Copy to Clipboard'
+            output: initialOutput.serializedHl7,
+            copyButtonText: 'Copy to Clipboard',
+            variableValues: initialVariableValues
         };
 
         setSerializations(prev => [...prev, newInstance]);
@@ -223,47 +252,30 @@ export default function UseTemplatePage() {
         router.push('/?loadGenerated=true');
     };
 
-    // Get filtered segments for a specific serialization (variables only)
-    const getFilteredSegments = useCallback((segments: SegmentDto[]) => {
-        return segments
-            .map(s => ({
-                ...s,
-                fields: s.fields.filter(f => fieldContainsVariable(f))
-            }))
-            .filter(s => s.fields.length > 0);
-    }, []);
+    // Handle variable value change for a specific serialization
+    const handleVariableChange = useCallback((serializationId: string, variableId: string, value: string) => {
+        setSerializations(prev => prev.map(s => {
+            if (s.id !== serializationId) return s;
 
-    // Create update handler for a specific serialization
-    const createUpdateHandler = useCallback((serializationId: string) => {
-        return (newSegments: SegmentDto[]) => {
-            setSerializations(prevSerializations =>
-                prevSerializations.map(s => {
-                    if (s.id !== serializationId) return s;
+            // Update the variable value
+            const newVariableValues = {
+                ...s.variableValues,
+                [variableId]: value
+            };
 
-                    // Merge the filtered segments back into the full segments
-                    const fullSegments = s.segments.map(fullSeg => {
-                        const updatedSeg = newSegments.find(ns => ns.id === fullSeg.id);
-                        if (!updatedSeg) return fullSeg;
-
-                        return {
-                            ...fullSeg,
-                            fields: fullSeg.fields.map(fullField => {
-                                const updatedField = updatedSeg.fields.find(uf => uf.position === fullField.position);
-                                if (!updatedField) return fullField;
-                                return updatedField;
-                            })
-                        };
-                    });
-
-                    return {
-                        ...s,
-                        segments: fullSegments,
-                        output: generateHl7Message(fullSegments)
-                    };
-                })
+            // Recompute the output with updated variable values
+            const output = computeInstanceOutput(
+                { id: s.id as InstanceId, name: '', variableValues: newVariableValues, createdAt: 0, isExpanded: true },
+                parsedSegments
             );
-        };
-    }, []);
+
+            return {
+                ...s,
+                variableValues: newVariableValues,
+                output: output.serializedHl7
+            };
+        }));
+    }, [parsedSegments]);
 
     return (
         <main className="min-h-screen bg-background font-sans transition-colors text-foreground">
@@ -319,7 +331,7 @@ export default function UseTemplatePage() {
                                 )}
                             </label>
                             <div
-                                className="w-full max-h-64 p-4 border border-input rounded-md font-mono text-sm bg-muted text-muted-foreground overflow-auto whitespace-pre-wrap"
+                                className="w-full max-h-64 p-4 border border-input rounded-md font-mono text-sm bg-muted text-muted-foreground overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-all"
                                 data-testid="raw-hl7-template"
                             >
                                 {highlightVariablesInText(currentTemplateContent.replace(/\r/g, '\n'))}
@@ -375,32 +387,29 @@ export default function UseTemplatePage() {
                                             </span>
                                         </label>
                                         <div
-                                            className="w-full h-64 p-3 border border-input rounded-md font-mono text-xs bg-background text-foreground overflow-auto whitespace-pre-wrap"
+                                            className="w-full h-64 p-3 border border-input rounded-md font-mono text-xs bg-background text-foreground overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-all"
                                             data-testid={`serialization-output-${ser.id}`}
                                         >
                                             {ser.output.replace(/\r/g, '\n')}
                                         </div>
                                     </div>
 
-                                    {/* Right: Variables Editor */}
+                                    {/* Right: Compact Variables Editor */}
                                     <div className="p-4 space-y-2">
                                         <label className="block text-sm font-medium text-muted-foreground">
                                             Edit Variables
-                                            {hasVariables ? (
+                                            {hasVariables && (
                                                 <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
-                                                    (Fill in values below)
-                                                </span>
-                                            ) : (
-                                                <span className="ml-2 text-xs text-muted-foreground font-normal italic">
-                                                    No variables in template
+                                                    ({uniqueVariables.length} variable{uniqueVariables.length !== 1 ? 's' : ''})
                                                 </span>
                                             )}
                                         </label>
-                                        <div className="h-64 overflow-auto border border-border rounded-lg">
-                                            <MessageEditor
-                                                segments={getFilteredSegments(ser.segments)}
-                                                onUpdate={createUpdateHandler(ser.id)}
-                                                highlightVariable={true}
+                                        <div className="h-64 overflow-auto border border-border rounded-lg bg-muted/30">
+                                            <VariablesOnlyView
+                                                uniqueVariables={uniqueVariables}
+                                                variableValues={ser.variableValues}
+                                                onVariableChange={(variableId, value) => handleVariableChange(ser.id, variableId, value)}
+                                                focusFirst={index === 0}
                                             />
                                         </div>
                                     </div>

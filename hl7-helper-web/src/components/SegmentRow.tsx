@@ -1,5 +1,5 @@
 import React from 'react';
-import { SegmentDto, SegmentDefinition } from '@/types';
+import { SegmentDto, SegmentDefinition, FieldDto } from '@/types';
 import { FieldInput } from './FieldInput';
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
     definition: SegmentDefinition | null;
     isExpanded: boolean;
     onToggle: () => void;
-    onFieldChange: (fieldIndex: number, value: string) => void;
+    onFieldChange: (fieldIndex: number, value: string, updatedField?: FieldDto) => void;
     highlightVariable?: boolean;
     // Linked variable support
     variableValues?: Map<string, string>;
@@ -65,7 +65,7 @@ export const SegmentRow: React.FC<Props> = ({
                             key={`${segment.name}-${field.position}-${index}`}
                             field={field}
                             definition={definition?.fields?.[field.position.toString()] || null}
-                            onChange={(val) => onFieldChange(index, val)}
+                            onChange={(val, updatedField) => onFieldChange(index, val, updatedField)}
                             highlightVariable={highlightVariable}
                             variableValues={variableValues}
                             onVariableChange={onVariableChange}

@@ -22,10 +22,13 @@ export interface SegmentDto {
 }
 
 export interface SerializationInstance {
+    /** Instance ID (use createInstanceId() from serialization.ts to create branded IDs) */
     id: string;
     segments: SegmentDto[];
     output: string;
     copyButtonText: string;
+    /** Variable values for this instance (variableId -> value) */
+    variableValues: Record<string, string>;
 }
 
 export interface GenerateRequest {

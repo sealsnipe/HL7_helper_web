@@ -63,6 +63,13 @@ The developer provides:
 | Visual appearance | Visual | tests/e2e/visual.spec.ts |
 | Accessibility | A11y | tests/e2e/accessibility.spec.ts |
 | Round-trip (parse→generate) | Unit | tests/unit/hl7RoundTrip.test.ts |
+| New page detection | E2E | tests/e2e/page-coverage.spec.ts |
+
+**Special Test: page-coverage.spec.ts**
+This test detects new pages added to the app. If it fails:
+- A new page was added that's not in the baseline
+- @ux-specialist must document the new page
+- Update baseline after UX review complete
 
 ### Step 3: Write Tests Following Existing Patterns
 Always examine existing test files first to match the project's conventions:

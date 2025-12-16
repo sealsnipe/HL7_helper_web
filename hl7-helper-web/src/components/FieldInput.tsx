@@ -6,7 +6,7 @@ import { getVariableGroupColor, getVariableBadgeColor, containsAnyVariable } fro
 interface Props {
     field: FieldDto;
     definition: FieldDefinition | null;
-    onChange: (value: string) => void;
+    onChange: (value: string, updatedField?: FieldDto) => void;
     highlightVariable?: boolean;
     // Linked variable support
     variableValues?: Map<string, string>;
@@ -31,6 +31,14 @@ export const FieldInput: React.FC<Props> = ({
         if (field.repetitions?.some(r => containsAnyVariable(r.value))) return true;
         return false;
     }, [field]);
+
+    // Auto-expand composite fields containing variables when in variable editing mode (template use page)
+    // This ensures users can immediately see and edit component inputs without manual expansion
+    React.useEffect(() => {
+        if (highlightVariable && fieldHasVariable && field.components && field.components.length > 0) {
+            setIsExpanded(true);
+        }
+    }, [highlightVariable, fieldHasVariable, field.components]);
 
     // Get display value - use variableValues map if available
     const displayValue = React.useMemo(() => {
@@ -254,7 +262,13 @@ export const FieldInput: React.FC<Props> = ({
                                                 }
                                                 return c.value;
                                             }).join('^');
-                                            onChange(newValue);
+                                            // Pass updated field with components preserved
+                                            const updatedField: FieldDto = {
+                                                ...field,
+                                                value: newValue,
+                                                components: newComponents
+                                            };
+                                            onChange(newValue, updatedField);
                                         },
                                         `${field.position}-${comp.position}`,
                                         definition?.components?.[comp.position.toString()]
@@ -289,7 +303,13 @@ export const FieldInput: React.FC<Props> = ({
                                                             }
                                                             return c.value;
                                                         }).join('^');
-                                                        onChange(newValue);
+                                                        // Pass updated field with components preserved
+                                                        const updatedField: FieldDto = {
+                                                            ...field,
+                                                            value: newValue,
+                                                            components: newComponents
+                                                        };
+                                                        onChange(newValue, updatedField);
                                                     },
                                                     `${field.position}-${comp.position}-${sub.position}`
                                                 )

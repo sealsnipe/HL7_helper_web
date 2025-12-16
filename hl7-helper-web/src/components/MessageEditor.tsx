@@ -1,5 +1,5 @@
 import React from 'react';
-import { SegmentDto } from '@/types';
+import { SegmentDto, FieldDto } from '@/types';
 import { loadDefinition, getSegmentDefinition } from '@/utils/definitionLoader';
 import { SegmentRow } from './SegmentRow';
 
@@ -71,7 +71,7 @@ export const MessageEditor: React.FC<Props> = ({
         setExpandedIndices(new Set());
     };
 
-    const handleFieldChange = (segmentIndex: number, fieldIndex: number, value: string) => {
+    const handleFieldChange = (segmentIndex: number, fieldIndex: number, value: string, updatedField?: FieldDto) => {
         // Create a deep copy to avoid mutating state directly
         const newSegments = segments.map((seg, sIdx) => {
             if (sIdx !== segmentIndex) return seg;
@@ -79,6 +79,12 @@ export const MessageEditor: React.FC<Props> = ({
                 ...seg,
                 fields: seg.fields.map((f, fIdx) => {
                     if (fIdx !== fieldIndex) return f;
+                    // If updatedField is provided (from component/subcomponent edits),
+                    // use it to preserve the components structure.
+                    // Otherwise, clear components when the raw value is directly edited.
+                    if (updatedField) {
+                        return updatedField;
+                    }
                     // Clear components and repetitions when value is directly edited to maintain single source of truth
                     return { ...f, value, components: [], repetitions: [] };
                 })
@@ -116,7 +122,7 @@ export const MessageEditor: React.FC<Props> = ({
                         definition={getSegmentDefinition(definition, segment.name)}
                         isExpanded={expandedIndices.has(index)}
                         onToggle={() => toggleSegment(index)}
-                        onFieldChange={(fieldIndex, val) => handleFieldChange(index, fieldIndex, val)}
+                        onFieldChange={(fieldIndex, val, updatedField) => handleFieldChange(index, fieldIndex, val, updatedField)}
                         highlightVariable={highlightVariable}
                         variableValues={variableValues}
                         onVariableChange={onVariableChange}

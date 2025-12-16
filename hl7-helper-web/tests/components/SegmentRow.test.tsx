@@ -190,8 +190,9 @@ describe('SegmentRow', () => {
     const secondField = screen.getByDisplayValue('field-2');
     fireEvent.change(secondField, { target: { value: 'updated' } });
 
-    // Should call onFieldChange with the field index (1 for the second field) and new value
-    expect(onFieldChange).toHaveBeenCalledWith(1, 'updated');
+    // Should call onFieldChange with the field index (1 for the second field), new value,
+    // and undefined for updatedField (since this is a simple field edit, not component edit)
+    expect(onFieldChange).toHaveBeenCalledWith(1, 'updated', undefined);
   });
 
   it('filters out trailing empty fields', () => {

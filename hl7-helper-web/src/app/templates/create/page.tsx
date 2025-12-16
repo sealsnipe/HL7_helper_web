@@ -28,10 +28,10 @@ export default function CreateTemplatePage() {
         };
 
         try {
-            const existing = localStorage.getItem('hl7_templates');
+            const existing = localStorage.getItem('hl7-helper:templates');
             const templates: Template[] = existing ? JSON.parse(existing) : [];
             templates.push(newTemplate);
-            localStorage.setItem('hl7_templates', JSON.stringify(templates));
+            localStorage.setItem('hl7-helper:templates', JSON.stringify(templates));
 
             router.push('/templates');
         } catch (error) {
@@ -45,9 +45,9 @@ export default function CreateTemplatePage() {
             );
 
             if (shouldClear) {
-                localStorage.removeItem('hl7_templates');
+                localStorage.removeItem('hl7-helper:templates');
                 const templates: Template[] = [newTemplate];
-                localStorage.setItem('hl7_templates', JSON.stringify(templates));
+                localStorage.setItem('hl7-helper:templates', JSON.stringify(templates));
                 router.push('/templates');
             }
             // If user clicks Cancel, stay on the page without saving

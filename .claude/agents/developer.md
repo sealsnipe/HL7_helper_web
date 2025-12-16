@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Use this agent when implementing new features, fixing bugs, or refactoring code in the HL7 Helper Web project. This agent writes code and provides test specifications for the test-developer agent to implement. Examples of when to use:\n\n<example>\nContext: User requests a new feature to be implemented\nuser: "Add support for parsing HL7 repetition fields"\nassistant: "I'll delegate this implementation task to the developer agent."\n<Task tool call to developer agent>\n</example>\n\n<example>\nContext: User reports a bug that needs fixing\nuser: "The parser is not handling escaped tildes correctly in repetition fields"\nassistant: "I'll have the developer agent investigate and fix this bug."\n<Task tool call to developer agent>\n</example>\n\n<example>\nContext: After analyzing a task, the orchestrator needs code implementation\nassistant: "Based on my analysis, this requires changes to the HL7 parser. Let me delegate to the developer agent to implement the fix and provide test specifications."\n<Task tool call to developer agent>\n</example>\n\n<example>\nContext: Code refactoring is needed\nuser: "Refactor the FieldInput component to use the new validation logic"\nassistant: "I'll use the developer agent to refactor this component and define what needs to be tested."\n<Task tool call to developer agent>\n</example>
-model: sonnet
+model: opus
 color: blue
 ---
 
@@ -92,7 +92,14 @@ cat src/utils/hl7Parser.ts | head -50
 - Escape sequences: `\F\` = `|`, `\S\` = `^`, `\R\` = `~`, `\T\` = `&`, `\E\` = `\`
 - Segments separated by `\r` (carriage return)
 
-### 4. Define Test Specification
+### 4. Check UI Principles (if visual changes)
+Before completing UI work, verify against `.claude/ui-principles/`:
+- Component follows documented standards
+- Theme support for all 7 themes
+- Accessibility requirements met
+- If new pattern needed, note in output for @ux-specialist
+
+### 5. Define Test Specification
 After implementing, document what @test-developer needs to test.
 
 ## Output Format
@@ -209,7 +216,7 @@ Your test specs must be **specific** and **verifiable**.
 
 ## Handling Feedback
 
-When receiving issues from @reviewer or @visual-reviewer:
+When receiving issues from @code-reviewer or @visual-reviewer:
 
 1. Address **critical issues first**
 2. If you disagree, explain reasoning

@@ -71,6 +71,13 @@ cat [changed files]
 - Clear, descriptive naming
 - File placed in appropriate location
 
+**UI Principles Compliance** (if visual changes)
+- Check `.claude/ui-principles/` for current standards
+- Component follows documented patterns
+- Theme support for all 7 themes
+- HELPERVARIABLE system implemented correctly
+- Accessibility requirements met
+
 **Performance** (flag obvious issues)
 - No O(n²) algorithms where O(n) is achievable
 - No unnecessary iterations

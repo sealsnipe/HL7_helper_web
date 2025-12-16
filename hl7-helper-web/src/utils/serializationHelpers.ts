@@ -94,23 +94,28 @@ function substituteVariablesInFields(
 ): FieldDto[] {
   return fields.map(field => {
     let newValue = field.value;
+    let newComponents = field.components;
 
     // Substitute variable placeholders in the value
     if (field.variableId && variableValues[field.variableId] !== undefined) {
       newValue = variableValues[field.variableId];
+      // Clear components when value is substituted, so the generator uses field.value
+      // instead of the old components that still contain HELPERVARIABLE
+      newComponents = [];
     }
 
     // Handle repetitions
     const newRepetitions = field.repetitions?.map(rep => {
       if (rep.variableId && variableValues[rep.variableId] !== undefined) {
-        return { ...rep, value: variableValues[rep.variableId] };
+        return {
+          ...rep,
+          value: variableValues[rep.variableId],
+          // Clear components for repetitions as well
+          components: []
+        };
       }
       return rep;
     });
-
-    // Components don't have variableId in the current data model
-    // Keep them as-is
-    const newComponents = field.components;
 
     return {
       ...field,

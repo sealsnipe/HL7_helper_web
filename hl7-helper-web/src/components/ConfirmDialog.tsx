@@ -93,7 +93,7 @@ export function ConfirmDialog({
 
   const confirmButtonClasses =
     variant === 'destructive'
-      ? 'bg-red-600 hover:bg-red-700 text-white'
+      ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
       : 'bg-green-600 hover:bg-green-700 text-white';
 
   return (

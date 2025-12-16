@@ -157,7 +157,16 @@ describe('FieldInput', () => {
     fireEvent.change(firstNameInput, { target: { value: 'Jane' } });
 
     // Should reconstruct the full value with ^ separators
-    expect(onChange).toHaveBeenCalledWith('Doe^Jane^M');
+    // Now also passes the updated field with preserved components
+    expect(onChange).toHaveBeenCalledWith('Doe^Jane^M', expect.objectContaining({
+      position: 5,
+      value: 'Doe^Jane^M',
+      components: [
+        { position: 1, value: 'Doe', subComponents: [] },
+        { position: 2, value: 'Jane', subComponents: [] },
+        { position: 3, value: 'M', subComponents: [] },
+      ],
+    }));
   });
 
   it('readonly fields are not editable', () => {
