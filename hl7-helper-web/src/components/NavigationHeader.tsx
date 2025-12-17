@@ -8,7 +8,6 @@ import { SearchMatch } from '@/utils/fieldSearch';
 
 interface NavigationHeaderProps {
   activePage?: 'home' | 'create' | 'serialize' | 'templates';
-  onNewMessage?: () => void;
   onLoadExample?: () => void;
   // Search props (optional - only used on home page)
   searchQuery?: string;
@@ -27,7 +26,6 @@ interface NavigationHeaderProps {
 
 export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   activePage = 'home',
-  onNewMessage,
   onLoadExample,
   // Search props
   searchQuery = '',
@@ -65,47 +63,19 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
     }
   }, [isHome, handleGlobalKeyDown, onSearchOpenChange]);
 
-  // Render "New Message" button or link
-  const renderNewMessageButton = () => {
-    if (isHome && onNewMessage) {
-      return (
-        <button
-          onClick={onNewMessage}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
-        >
-          New Message
-        </button>
-      );
+  // Render "Load Example" button - only on home page
+  const renderLoadExampleButton = () => {
+    // Only show on home page when handler is provided
+    if (!isHome || !onLoadExample) {
+      return null;
     }
     return (
-      <Link
-        href="/"
+      <button
+        onClick={onLoadExample}
         className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
       >
-        New Message
-      </Link>
-    );
-  };
-
-  // Render "Load Example" button or link
-  const renderLoadExampleButton = () => {
-    if (isHome && onLoadExample) {
-      return (
-        <button
-          onClick={onLoadExample}
-          className="px-4 py-2 bg-card border border-border rounded-md text-sm font-medium text-card-foreground hover:bg-muted shadow-sm transition-all"
-        >
-          Load Example Message
-        </button>
-      );
-    }
-    return (
-      <Link
-        href="/"
-        className="px-4 py-2 bg-card border border-border rounded-md text-sm font-medium text-card-foreground hover:bg-muted shadow-sm transition-all"
-      >
         Load Example Message
-      </Link>
+      </button>
     );
   };
 
@@ -168,7 +138,6 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         </Link>
 
         {renderLoadExampleButton()}
-        {renderNewMessageButton()}
       </div>
     </header>
   );

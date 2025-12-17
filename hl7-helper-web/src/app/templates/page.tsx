@@ -142,6 +142,11 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   // Delete confirmation dialog state
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
+  // Track whether we should skip the next useEffect re-parse
+  // This prevents the race condition where handleEditorUpdate sets segments,
+  // but the useEffect immediately overwrites them by re-parsing editContent
+  const skipNextParse = React.useRef(false);
+
   /**
    * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors
    * Used for read-only display (not for editable textareas to avoid cursor issues)
@@ -175,6 +180,12 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   // Parse content when it changes (for expanded view)
   // Apply variable editability to set variableId and variableGroupId for badge display
   useEffect(() => {
+    // Skip re-parsing if segments were just set directly by handleEditorUpdate
+    if (skipNextParse.current) {
+      skipNextParse.current = false;
+      return;
+    }
+
     if (expandedId) {
       if (editingId) {
         const parsed = parseHl7Message(editContent);
@@ -325,6 +336,9 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   // Handle updates from MessageEditor
   const handleEditorUpdate = (updatedSegments: SegmentDto[]) => {
     if (!editingId) return; // Should only happen in edit mode
+
+    // Mark that we should skip the next parse since we're setting segments directly
+    skipNextParse.current = true;
 
     // Regenerate HL7 string
     const newHl7 = generateHl7Message(updatedSegments);
