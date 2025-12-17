@@ -214,6 +214,30 @@ Your test specs must be **specific** and **verifiable**.
 - 'use client' only when needed
 - Handle loading states
 
+## Requesting Help from @code-reviewer
+
+**IMPORTANT**: When you encounter complex changes or repeated errors, request the orchestrator to spawn a @code-reviewer agent to help analyze the issue. This prevents wasted time and allows parallel work.
+
+**When to request reviewer help:**
+1. **Comprehensive changes** affecting 3+ files
+2. **Repeated failures** - same error appearing 2+ times
+3. **Architectural uncertainty** - unsure about best approach
+4. **Complex debugging** - error cause not obvious
+
+**How to request:**
+Include in your output:
+```markdown
+### Reviewer Assistance Requested
+
+**Reason**: [Brief description - e.g., "Repeated type errors after refactoring"]
+**Files involved**: [List files]
+**Specific question**: [What you need help analyzing]
+
+@orchestrator: Please spawn @code-reviewer to analyze this while I continue working.
+```
+
+The reviewer will work in parallel and provide analysis. Continue your work until you receive reviewer feedback, then incorporate their findings.
+
 ## Handling Feedback
 
 When receiving issues from @code-reviewer or @visual-reviewer:

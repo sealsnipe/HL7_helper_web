@@ -6,6 +6,20 @@ import { generateHl7Message } from '@/utils/hl7Generator';
 // Debounce delay for live parsing (ms)
 const PARSE_DEBOUNCE_MS = 300;
 
+// Debounce delay for history tracking (ms)
+const HISTORY_DEBOUNCE_MS = 500;
+
+// Maximum number of history entries
+const MAX_HISTORY_SIZE = 50;
+
+/**
+ * Interface for editor history state
+ */
+interface EditorHistory {
+  past: SegmentDto[][];
+  future: SegmentDto[][];
+}
+
 /**
  * Return type for the useHl7Editor hook
  */
@@ -16,6 +30,8 @@ export interface UseHl7EditorReturn {
   isLoading: boolean;
   error: string | null;
   isTyping: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
 
   // Actions
   setRawInput: (value: string) => void;
@@ -23,6 +39,8 @@ export interface UseHl7EditorReturn {
   updateRaw: () => void;
   clearMessage: () => void;
   loadMessage: (hl7: string) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 /**
@@ -90,9 +108,16 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [history, setHistory] = useState<EditorHistory>({ past: [], future: [] });
 
   // Ref for debounce timer
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref for history debounce timer
+  const historyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref to track if we're in the middle of an undo/redo operation
+  const isUndoRedoRef = useRef<boolean>(false);
+  // Ref to store the current segments for history comparison
+  const segmentsRef = useRef<SegmentDto[]>([]);
 
   /**
    * Parse HL7 text into segments with validation
@@ -173,11 +198,41 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
   );
 
   /**
+   * Push current state to history (with debounce to batch rapid changes)
+   */
+  const pushToHistory = useCallback((previousSegments: SegmentDto[]) => {
+    // Don't push to history if we're in an undo/redo operation
+    if (isUndoRedoRef.current) return;
+
+    // Don't push empty states or if segments haven't actually changed
+    if (previousSegments.length === 0) return;
+
+    // Clear debounce timer if exists
+    if (historyDebounceRef.current) {
+      clearTimeout(historyDebounceRef.current);
+    }
+
+    historyDebounceRef.current = setTimeout(() => {
+      setHistory((prev) => ({
+        past: [...prev.past.slice(-(MAX_HISTORY_SIZE - 1)), previousSegments],
+        future: [], // Clear redo stack on new action
+      }));
+    }, HISTORY_DEBOUNCE_MS);
+  }, []);
+
+  /**
    * Update segments directly (e.g., from visual editor)
    */
-  const updateSegments = useCallback((updatedSegments: SegmentDto[]) => {
-    setSegments(updatedSegments);
-  }, []);
+  const updateSegments = useCallback(
+    (updatedSegments: SegmentDto[]) => {
+      // Push current state to history before updating
+      if (segmentsRef.current.length > 0 && !isUndoRedoRef.current) {
+        pushToHistory(segmentsRef.current);
+      }
+      setSegments(updatedSegments);
+    },
+    [pushToHistory]
+  );
 
   /**
    * Regenerate raw HL7 from current segments
@@ -200,9 +255,92 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
    * Clear the message completely
    */
   const clearMessage = useCallback(() => {
+    // Push current state to history before clearing
+    if (segmentsRef.current.length > 0) {
+      // Clear any pending debounce and push immediately
+      if (historyDebounceRef.current) {
+        clearTimeout(historyDebounceRef.current);
+      }
+      setHistory((prev) => ({
+        past: [...prev.past.slice(-(MAX_HISTORY_SIZE - 1)), segmentsRef.current],
+        future: [],
+      }));
+    }
     setRawInputState('');
     setSegments([]);
     setError(null);
+  }, []);
+
+  /**
+   * Undo the last change
+   */
+  const undo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.past.length === 0) return prev;
+
+      const previous = prev.past[prev.past.length - 1];
+      const newPast = prev.past.slice(0, -1);
+
+      // Mark that we're in an undo operation
+      isUndoRedoRef.current = true;
+
+      // Update segments to the previous state
+      setSegments(previous);
+
+      // Generate raw HL7 from the restored segments
+      try {
+        const newHl7 = generateHl7Message(previous);
+        setRawInputState(newHl7);
+      } catch (err) {
+        console.error('Generate error during undo:', err);
+      }
+
+      // Reset the undo/redo flag after a short delay
+      setTimeout(() => {
+        isUndoRedoRef.current = false;
+      }, 50);
+
+      return {
+        past: newPast,
+        future: [segmentsRef.current, ...prev.future],
+      };
+    });
+  }, []);
+
+  /**
+   * Redo the last undone change
+   */
+  const redo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.future.length === 0) return prev;
+
+      const next = prev.future[0];
+      const newFuture = prev.future.slice(1);
+
+      // Mark that we're in a redo operation
+      isUndoRedoRef.current = true;
+
+      // Update segments to the next state
+      setSegments(next);
+
+      // Generate raw HL7 from the restored segments
+      try {
+        const newHl7 = generateHl7Message(next);
+        setRawInputState(newHl7);
+      } catch (err) {
+        console.error('Generate error during redo:', err);
+      }
+
+      // Reset the undo/redo flag after a short delay
+      setTimeout(() => {
+        isUndoRedoRef.current = false;
+      }, 50);
+
+      return {
+        past: [...prev.past, segmentsRef.current],
+        future: newFuture,
+      };
+    });
   }, []);
 
   /**
@@ -224,11 +362,19 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
     [parseMessage]
   );
 
-  // Cleanup debounce timer on unmount
+  // Keep segmentsRef in sync with segments state
+  useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
+
+  // Cleanup debounce timers on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+      if (historyDebounceRef.current) {
+        clearTimeout(historyDebounceRef.current);
       }
     };
   }, []);
@@ -242,6 +388,10 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Compute canUndo and canRedo from history state
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
+
   return {
     // State
     rawInput,
@@ -249,6 +399,8 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
     isLoading,
     error,
     isTyping,
+    canUndo,
+    canRedo,
 
     // Actions
     setRawInput,
@@ -256,6 +408,8 @@ export function useHl7Editor(initialValue?: string): UseHl7EditorReturn {
     updateRaw,
     clearMessage,
     loadMessage,
+    undo,
+    redo,
   };
 }
 
