@@ -113,7 +113,20 @@
   - Panel closes (disappears)
   - Badge collapses back to summary state
 
-### 6. User Fixes Validation Issues
+### 6. User Clicks Validation Error (Phase 3)
+
+- **User Action**: Clicks on a validation error item in the expanded panel
+- **System Response**:
+  - Expands the segment containing the error (if collapsed)
+  - Highlights the problematic field with yellow pulse animation (2 seconds)
+  - Scrolls the field into view
+  - Field becomes immediately editable
+  - Validation panel remains open for reference
+- **Conditions**: Only errors with `segmentIndex` are clickable
+- **Visual Feedback**: Error items show "Click to navigate" hint when clickable
+- **UI Element**: `data-testid="validation-item-{code}"` with `role="button"`
+
+### 7. User Fixes Validation Issues
 
 - **User Action**: Edits fields to resolve validation errors
   - Example: Adds missing MSH-9 (Message Type)
@@ -136,8 +149,10 @@
 | 1 | Message has warnings only | Shows amber badge with warning count |
 | 1 | Message has info only | Shows blue badge with info count |
 | 3 | Badge clicked when expanded | Collapses the panel |
-| 6 | All errors fixed | Badge changes to green "Valid" |
-| 6 | Errors remain | Badge stays red, count updates |
+| 6 | Error is clickable (has segmentIndex) | Navigates to field, highlights it |
+| 6 | Error not clickable (no segmentIndex) | No navigation, informational only |
+| 7 | All errors fixed | Badge changes to green "Valid" |
+| 7 | Errors remain | Badge stays red, count updates |
 
 ## End States
 
@@ -157,8 +172,8 @@
   - `edit-field.md` (Validation updates after edit)
   - `load-example.md` (Validation runs after load)
 - **Leads to**:
-  - `edit-field.md` (User edits fields to fix issues)
-  - No direct navigation (informational only)
+  - `edit-field.md` (User clicks error to navigate and edit the field)
+  - `expand-collapse.md` (Error click expands the segment)
 
 ## Technical Details
 
@@ -205,6 +220,10 @@
 }
 ```
 
+### Keyboard Shortcuts (Phase 3)
+- **Alt+V**: Toggle validation panel (works globally, even in inputs)
+- **Escape**: Close validation panel (when focused)
+
 ### Validation Timing
 - Runs after:
   - Initial parse
@@ -232,11 +251,14 @@
 
 | Feature | Implementation |
 |---------|----------------|
-| Keyboard access | Badge is focusable button |
+| Keyboard access | Badge is focusable button, Alt+V shortcut |
+| Keyboard navigation | Enter/Space on error items to navigate |
 | ARIA attributes | `aria-expanded`, `aria-label` with summary |
-| Screen reader | Announces "X errors, Y warnings" |
+| ARIA roles | Error items have `role="button"` when clickable |
+| Screen reader | Announces "X errors, Y warnings" and "Click to navigate" |
 | Color contrast | All severity colors meet WCAG AA |
-| Focus management | Close button is focusable |
+| Focus management | Close button is focusable, error items focusable |
+| Controlled state | Supports controlled `isExpanded` prop for external control |
 
 ## Visual Design
 
@@ -259,13 +281,24 @@ Each issue has matching background with hover state.
 
 | Limitation | Description |
 |------------|-------------|
-| No click-to-navigate | Clicking an issue does NOT navigate to the field |
+| Partial navigation | Only errors with `segmentIndex` are clickable |
 | No inline indicators | Validation issues not shown inline in fields |
 | No filtering | Cannot filter issues by severity or segment |
 | No sorting | Issues always grouped by severity |
 | No copy/export | Cannot copy or export validation report |
+| Panel position | Panel always opens below badge (may require scrolling) |
+
+## Phase 3 Improvements (Implemented)
+
+| Improvement | Status | Description |
+|-------------|--------|-------------|
+| Clickable errors | ✅ Implemented | Click validation errors to navigate to problematic field |
+| Keyboard shortcut | ✅ Implemented | Alt+V toggles validation panel |
+| Controlled state | ✅ Implemented | ValidationBadge supports controlled `isExpanded` prop |
+| Visual feedback | ✅ Implemented | Clickable errors show "Click to navigate" hint |
+| Focus management | ✅ Implemented | Proper timeout cleanup on unmount |
 
 ## Last Updated
 
 - **Date**: 2025-12-17
-- **Change**: Initial documentation for Phase 2 validation feedback feature
+- **Change**: Phase 3 update - Added clickable validation errors and Alt+V keyboard shortcut

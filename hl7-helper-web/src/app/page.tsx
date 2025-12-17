@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageEditor } from '@/components/MessageEditor';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -11,6 +11,7 @@ import { useFieldSearch } from '@/hooks/useFieldSearch';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { Undo2, Redo2 } from 'lucide-react';
 import { SearchMatch } from '@/utils/fieldSearch';
+import { ValidationError } from '@/types/validation';
 
 /** Highlighted field state for search results */
 interface HighlightedField {
@@ -59,6 +60,19 @@ export default function Home() {
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [highlightedField, setHighlightedField] = useState<HighlightedField | null>(null);
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
+  const [showValidationPanel, setShowValidationPanel] = useState<boolean>(false);
+
+  // Ref for highlight timeout cleanup
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup highlight timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // UI handlers
   const handleNewMessage = () => {
@@ -116,9 +130,15 @@ export default function Home() {
         componentPosition: match.componentPosition,
       });
 
+      // Clear any existing timeout before setting a new one
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+
       // Clear highlight after animation
-      setTimeout(() => {
+      highlightTimeoutRef.current = setTimeout(() => {
         setHighlightedField(null);
+        highlightTimeoutRef.current = null;
       }, 2000);
 
       // Close search after selection
@@ -127,14 +147,57 @@ export default function Home() {
     [setSearchOpen]
   );
 
-  // Keyboard shortcuts for undo/redo
+  // Handle validation error click - navigate to the problematic field
+  const handleValidationErrorClick = useCallback((error: ValidationError) => {
+    if (error.segmentIndex === undefined) return;
+
+    // Expand the segment containing the error
+    setExpandedSegments((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(error.segmentIndex!);
+      return newSet;
+    });
+
+    // Set the highlighted field
+    setHighlightedField({
+      segmentIndex: error.segmentIndex,
+      fieldPosition: error.fieldPosition || 1,
+    });
+
+    // Clear any existing timeout before setting a new one
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+
+    // Clear highlight after animation
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedField(null);
+      highlightTimeoutRef.current = null;
+    }, 2000);
+  }, []);
+
+  // Keyboard shortcuts for undo/redo, search, and validation panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if we're in an input or textarea
       const target = e.target as HTMLElement;
       const isTextInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-      // Only handle shortcuts when not in the raw HL7 textarea (data-testid="raw-hl7-input")
+      // Ctrl+K to open search (works globally, even in inputs)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+
+      // Alt+V to toggle validation panel (works globally, even in inputs)
+      if (e.altKey && e.key === 'v') {
+        e.preventDefault();
+        setShowValidationPanel((prev) => !prev);
+        return;
+      }
+
+      // Only handle undo/redo shortcuts when not in the raw HL7 textarea (data-testid="raw-hl7-input")
       // to avoid conflicting with native undo/redo in that textarea
       if (isTextInput && target.getAttribute('data-testid') === 'raw-hl7-input') {
         return;
@@ -154,7 +217,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, setSearchOpen]);
 
   // Check for generated message from template system
   useEffect(() => {
@@ -378,7 +441,12 @@ export default function Home() {
                         </svg>
                       </div>
                       <h2 className="text-lg font-bold text-foreground">Visual Editor</h2>
-                      <ValidationBadge validationResult={validationResult} />
+                      <ValidationBadge
+                        validationResult={validationResult}
+                        onErrorClick={handleValidationErrorClick}
+                        isExpanded={showValidationPanel}
+                        onExpandedChange={setShowValidationPanel}
+                      />
                     </div>
                     <div className="flex gap-2">
                       <button
