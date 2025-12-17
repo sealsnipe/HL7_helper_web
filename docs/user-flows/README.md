@@ -12,6 +12,8 @@ This directory contains comprehensive documentation of all user flows in the HL7
 | Expand/Collapse Segments | Documented | `main-editor/expand-collapse.md` |
 | Load Example Message | Documented | `main-editor/load-example.md` |
 | New Message | Documented | `main-editor/new-message.md` |
+| Field Search | Documented | `main-editor/field-search.md` |
+| Validation Feedback | Documented | `main-editor/validation-feedback.md` |
 | View Templates | Documented | `templates/view-templates.md` |
 | Create Template | Documented | `templates/create-template.md` |
 | Edit Template | Documented | `templates/edit-template.md` |
@@ -42,6 +44,8 @@ flowchart TD
         EXP[Expand/Collapse]
         NEW[New Message]
         LOAD[Load Example]
+        SEARCH[Field Search]
+        VAL[Validation Feedback]
     end
 
     subgraph Templates["Templates"]
@@ -60,7 +64,13 @@ flowchart TD
 
     ME --> PARSE
     PARSE --> EDIT
+    PARSE --> VAL
+    PARSE --> SEARCH
+    SEARCH --> EDIT
+    SEARCH --> EXP
+    VAL --> EDIT
     EDIT --> GEN
+    EDIT --> VAL
     ME --> EXP
     ME --> NEW
     ME --> LOAD
@@ -87,7 +97,9 @@ flowchart TD
 | MessageEditor | `src/components/MessageEditor.tsx` | Displays parsed segments, handles expand/collapse |
 | SegmentRow | `src/components/SegmentRow.tsx` | Individual segment display with fields |
 | FieldInput | `src/components/FieldInput.tsx` | Field editing with component/subcomponent support |
-| NavigationHeader | `src/components/NavigationHeader.tsx` | Navigation and action buttons |
+| NavigationHeader | `src/components/NavigationHeader.tsx` | Navigation, action buttons, and search bar |
+| SearchBar | `src/components/SearchBar.tsx` | Field search input with dropdown results |
+| ValidationBadge | `src/components/ValidationBadge.tsx` | Validation status and issue display |
 | ThemeSwitcher | `src/components/ThemeSwitcher.tsx` | Theme selection dropdown |
 
 ## Data Test IDs
@@ -99,6 +111,13 @@ flowchart TD
 | Field Input (Repetition) | `field-input-{position}-rep-{index}` | Repetition fields |
 | Field Input (Composite) | `field-input-{position}-composite` | Composite field display |
 | Field Expand Button | `field-expand-{position}` | Component expand button |
+| Search Input | `search-input` | Field search input in header |
+| Search Clear Button | `search-clear` | Clear search query button |
+| Search Result Item | `search-result-{index}` | Individual search result |
+| Validation Badge (Valid) | `validation-badge-valid` | Green valid badge |
+| Validation Badge | `validation-badge` | Badge with issues |
+| Validation Details Panel | `validation-details` | Expanded validation panel |
+| Validation Issue Item | `validation-item-{code}` | Individual validation issue |
 | Template Select | `template-select` | Use Template page dropdown |
 | Raw HL7 Output | `raw-hl7-output` | Use Template output display |
 | Edit Content Textarea | `edit-content-textarea` | Template edit raw content |
@@ -109,6 +128,6 @@ flowchart TD
 
 ## Last Updated
 
-- **Date**: 2025-12-14
-- **By**: UX-Analyst Agent
-- **Changes**: Initial documentation of all user flows
+- **Date**: 2025-12-17
+- **By**: UX-Specialist Agent
+- **Changes**: Added Phase 2 flows (Field Search, Validation Feedback), updated flow map and component reference
