@@ -1,0 +1,3 @@
+#!/bin/sh
+cd hl7-helper-web
+npx lint-staged
