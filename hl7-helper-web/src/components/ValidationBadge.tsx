@@ -5,24 +5,40 @@ import { ValidationResult, ValidationError } from '@/types/validation';
 import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 interface ValidationBadgeProps {
-  /** The validation result to display */
   validationResult: ValidationResult;
-  /** Optional className for additional styling */
   className?: string;
+  onErrorClick?: (error: ValidationError) => void;
+  /** Controlled expanded state (optional) */
+  isExpanded?: boolean;
+  /** Callback when expanded state changes (optional) */
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
-/**
- * Displays a summary badge of validation results with expandable details
- */
-export function ValidationBadge({ validationResult, className = '' }: ValidationBadgeProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function ValidationBadge({
+  validationResult,
+  className = '',
+  onErrorClick,
+  isExpanded: controlledExpanded,
+  onExpandedChange,
+}: ValidationBadgeProps) {
+  const [internalExpanded, setInternalExpanded] = useState(false);
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledExpanded !== undefined;
+  const isExpanded = isControlled ? controlledExpanded : internalExpanded;
+  const setIsExpanded = (expanded: boolean) => {
+    // Only update internal state in uncontrolled mode
+    if (!isControlled) {
+      setInternalExpanded(expanded);
+    }
+    onExpandedChange?.(expanded);
+  };
 
   const errorCount = validationResult.errors.length;
   const warningCount = validationResult.warnings.length;
   const infoCount = validationResult.info.length;
   const totalIssues = errorCount + warningCount + infoCount;
 
-  // Don't render if there are no issues
   if (totalIssues === 0) {
     return (
       <div
@@ -37,7 +53,6 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
     );
   }
 
-  // Determine the badge color based on severity
   const getBadgeStyles = () => {
     if (errorCount > 0) {
       return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
@@ -48,7 +63,6 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
     return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
   };
 
-  // Build summary text
   const getSummaryText = () => {
     const parts: string[] = [];
     if (errorCount > 0) parts.push(`${errorCount} error${errorCount !== 1 ? 's' : ''}`);
@@ -57,9 +71,18 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
     return parts.join(', ');
   };
 
+  const handleErrorClick = (error: ValidationError) => {
+    if (onErrorClick && error.segmentIndex !== undefined) {
+      onErrorClick(error);
+    }
+  };
+
+  const isClickable = (error: ValidationError) => {
+    return onErrorClick !== undefined && error.segmentIndex !== undefined;
+  };
+
   return (
     <div className={`relative ${className}`}>
-      {/* Summary Badge */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all hover:opacity-90 ${getBadgeStyles()}`}
@@ -74,7 +97,6 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
 
-      {/* Expanded Details Panel */}
       {isExpanded && (
         <div
           className="absolute top-full left-0 mt-2 w-80 max-h-96 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50"
@@ -91,17 +113,29 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
             </button>
           </div>
           <div className="p-2 space-y-1">
-            {/* Errors */}
             {validationResult.errors.map((error, index) => (
-              <ValidationErrorItem key={`error-${index}`} error={error} />
+              <ValidationErrorItem
+                key={`error-${index}`}
+                error={error}
+                onClick={() => handleErrorClick(error)}
+                isClickable={isClickable(error)}
+              />
             ))}
-            {/* Warnings */}
             {validationResult.warnings.map((warning, index) => (
-              <ValidationErrorItem key={`warning-${index}`} error={warning} />
+              <ValidationErrorItem
+                key={`warning-${index}`}
+                error={warning}
+                onClick={() => handleErrorClick(warning)}
+                isClickable={isClickable(warning)}
+              />
             ))}
-            {/* Info */}
             {validationResult.info.map((info, index) => (
-              <ValidationErrorItem key={`info-${index}`} error={info} />
+              <ValidationErrorItem
+                key={`info-${index}`}
+                error={info}
+                onClick={() => handleErrorClick(info)}
+                isClickable={isClickable(info)}
+              />
             ))}
           </div>
         </div>
@@ -112,9 +146,11 @@ export function ValidationBadge({ validationResult, className = '' }: Validation
 
 interface ValidationErrorItemProps {
   error: ValidationError;
+  onClick?: () => void;
+  isClickable?: boolean;
 }
 
-function ValidationErrorItem({ error }: ValidationErrorItemProps) {
+function ValidationErrorItem({ error, onClick, isClickable = false }: ValidationErrorItemProps) {
   const getIcon = () => {
     switch (error.severity) {
       case 'error':
@@ -137,10 +173,25 @@ function ValidationErrorItem({ error }: ValidationErrorItemProps) {
     }
   };
 
+  const baseClasses = `flex items-start gap-2 p-2 rounded-md transition-colors ${getBgColor()}`;
+  const clickableClasses = isClickable ? 'cursor-pointer' : '';
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <div
-      className={`flex items-start gap-2 p-2 rounded-md transition-colors ${getBgColor()}`}
+      className={`${baseClasses} ${clickableClasses}`}
+      onClick={isClickable ? onClick : undefined}
+      onKeyDown={handleKeyDown}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
       data-testid={`validation-item-${error.code}`}
+      aria-label={isClickable ? `Go to ${error.path || error.code}: ${error.message}` : undefined}
     >
       {getIcon()}
       <div className="flex-1 min-w-0">
@@ -148,6 +199,7 @@ function ValidationErrorItem({ error }: ValidationErrorItemProps) {
           <span className="text-xs font-mono text-muted-foreground">
             {error.path || error.code}
           </span>
+          {isClickable && <span className="text-xs text-primary">Click to navigate</span>}
         </div>
         <p className="text-sm text-card-foreground mt-0.5">{error.message}</p>
       </div>

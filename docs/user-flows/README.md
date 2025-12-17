@@ -126,8 +126,31 @@ flowchart TD
 | Cancel Button | `cancel-button` | Use Template cancel |
 | Serialize Button | `serialize-button` | Use Template serialize action |
 
+## Keyboard Shortcuts Reference
+
+| Shortcut | Action | Scope |
+|----------|--------|-------|
+| Ctrl+K / Cmd+K | Open field search | Global (works everywhere) |
+| Alt+V | Toggle validation panel | Global (works everywhere) |
+| Ctrl+Z / Cmd+Z | Undo | Visual editor only |
+| Ctrl+Y / Cmd+Shift+Z | Redo | Visual editor only |
+| Arrow Up/Down | Navigate search results | Search dropdown |
+| Enter | Select search result | Search dropdown |
+| Escape | Clear search / Close panel | Context-dependent |
+
+## PWA Support (Phase 3)
+
+The application now supports Progressive Web App (PWA) installation:
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Manifest | ✅ Implemented | `/manifest.json` with app metadata |
+| Icons | ✅ Implemented | SVG icons (any size, 192x192, 512x512) |
+| Installable | ✅ Yes | Can be installed as standalone app |
+| Offline | ❌ Not yet | Service worker not implemented |
+
 ## Last Updated
 
 - **Date**: 2025-12-17
 - **By**: UX-Specialist Agent
-- **Changes**: Added Phase 2 flows (Field Search, Validation Feedback), updated flow map and component reference
+- **Changes**: Phase 3 update - Added clickable validation errors, search discoverability (Ctrl+K hint), keyboard shortcuts reference, and PWA support

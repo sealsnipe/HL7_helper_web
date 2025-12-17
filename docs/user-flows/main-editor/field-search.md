@@ -103,12 +103,14 @@
   - Expands the segment containing the matched field (if collapsed)
   - Highlights the field with animation (yellow pulse for 2 seconds)
   - Scrolls the field into view
-  - Closes the search bar
-  - Clears the search query
+  - Closes the search bar (Phase 3 behavior)
+  - Does NOT clear the search query (preserved for reuse)
 
 #### Option B: Click Result
 - **User Action**: Clicks on a result item
 - **System Response**: Same as Option A
+
+**Phase 3 Note**: Search bar now closes after selection but preserves the query, allowing users to quickly reopen and continue searching without retyping.
 
 ### 6. User Closes Search
 
@@ -194,10 +196,12 @@
 - Message type determined from MSH-9
 
 ### Keyboard Shortcuts
-- **Ctrl+K / Cmd+K**: Open search (global, only on main page)
+- **Ctrl+K / Cmd+K**: Open search (global, works even in inputs)
 - **Arrow Up/Down**: Navigate results
-- **Enter**: Select result
+- **Enter**: Select result (closes search, preserves query)
 - **Escape**: Clear query or close search
+
+**Phase 3 Enhancement**: Ctrl+K now displays a visible badge in the search input placeholder, improving discoverability.
 
 ### State Management
 - Query state: Managed by `useFieldSearch`
@@ -225,7 +229,15 @@
 | Screen reader labels | `aria-label` on all interactive elements |
 | Focus management | Auto-focus on open, focus trap in dropdown |
 
+## Phase 3 Improvements (Implemented)
+
+| Improvement | Status | Description |
+|-------------|--------|-------------|
+| Search persistence | ✅ Implemented | Search stays open after selection (behavior reverted from Phase 2) |
+| Ctrl+K hint | ✅ Implemented | "Search fields (Ctrl+K)" visible in placeholder |
+| Global shortcut | ✅ Implemented | Ctrl+K works even when typing in inputs |
+
 ## Last Updated
 
 - **Date**: 2025-12-17
-- **Change**: Initial documentation for Phase 2 field search feature
+- **Change**: Phase 3 update - Search closes after selection, Ctrl+K hint added to placeholder
