@@ -1,5 +1,10 @@
 import { getPersistenceService } from './PersistenceService';
 import type { ExportBundle, ImportResult } from '@/types/persistence';
+import {
+  TemplateArraySchema,
+  UserSettingsSchema,
+  SerializationStateSchema,
+} from '@/schemas';
 
 /**
  * Parse import file to ExportBundle
@@ -93,6 +98,37 @@ export function validateImportBundle(bundle: unknown): ValidationResult {
   const data = (b.data || {}) as Record<string, unknown>;
   const templates = data.templates as { data?: unknown[] } | undefined;
   const templatesCount = Array.isArray(templates?.data) ? templates.data.length : 0;
+
+  // Deep validation of data payloads using Zod schemas
+  if (data.templates && typeof data.templates === 'object') {
+    const templatesEnvelope = data.templates as { data?: unknown };
+    if (templatesEnvelope.data) {
+      const result = TemplateArraySchema.safeParse(templatesEnvelope.data);
+      if (!result.success) {
+        errors.push(`Invalid templates data: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`);
+      }
+    }
+  }
+
+  if (data.settings && typeof data.settings === 'object') {
+    const settingsEnvelope = data.settings as { data?: unknown };
+    if (settingsEnvelope.data) {
+      const result = UserSettingsSchema.safeParse(settingsEnvelope.data);
+      if (!result.success) {
+        errors.push(`Invalid settings data: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`);
+      }
+    }
+  }
+
+  if (data.serializationState && typeof data.serializationState === 'object') {
+    const serializationEnvelope = data.serializationState as { data?: unknown };
+    if (serializationEnvelope.data) {
+      const result = SerializationStateSchema.safeParse(serializationEnvelope.data);
+      if (!result.success) {
+        errors.push(`Invalid serialization state: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')}`);
+      }
+    }
+  }
 
   // Warnings
   if (templatesCount === 0) {
