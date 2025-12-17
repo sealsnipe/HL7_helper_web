@@ -1,13 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MessageEditor } from '@/components/MessageEditor';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ValidationBadge } from '@/components/ValidationBadge';
 import { useHl7Editor, isValidHl7Content } from '@/hooks/useHl7Editor';
+import { useFieldSearch } from '@/hooks/useFieldSearch';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { Undo2, Redo2 } from 'lucide-react';
+import { SearchMatch } from '@/utils/fieldSearch';
+
+/** Highlighted field state for search results */
+interface HighlightedField {
+  segmentIndex: number;
+  fieldPosition: number;
+  componentPosition?: number;
+}
 
 export default function Home() {
   // Use the hook for all HL7 editor state management
@@ -26,12 +36,29 @@ export default function Home() {
     loadMessage,
     undo,
     redo,
+    validationResult,
   } = useHl7Editor();
+
+  // Field search hook
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    selectedIndex: searchSelectedIndex,
+    selectNext: searchSelectNext,
+    selectPrevious: searchSelectPrevious,
+    clear: searchClear,
+    isSearching,
+    isOpen: isSearchOpen,
+    setIsOpen: setSearchOpen,
+  } = useFieldSearch(segments);
 
   // UI-specific state (not related to HL7 parsing/editing)
   const [showTemplateModal, setShowTemplateModal] = useState<boolean>(false);
   const [showNewMessageConfirm, setShowNewMessageConfirm] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
+  const [highlightedField, setHighlightedField] = useState<HighlightedField | null>(null);
+  const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
 
   // UI handlers
   const handleNewMessage = () => {
@@ -72,6 +99,34 @@ export default function Home() {
     loadMessage(template);
   };
 
+  // Handle search result selection - expand segment and highlight field
+  const handleSearchResultSelect = useCallback(
+    (match: SearchMatch) => {
+      // Expand the segment containing the match
+      setExpandedSegments((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(match.segmentIndex);
+        return newSet;
+      });
+
+      // Set the highlighted field
+      setHighlightedField({
+        segmentIndex: match.segmentIndex,
+        fieldPosition: match.fieldPosition,
+        componentPosition: match.componentPosition,
+      });
+
+      // Clear highlight after animation
+      setTimeout(() => {
+        setHighlightedField(null);
+      }, 2000);
+
+      // Close search after selection
+      setSearchOpen(false);
+    },
+    [setSearchOpen]
+  );
+
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -108,13 +163,11 @@ export default function Home() {
       const generated = localStorage.getItem('generated_hl7');
       if (generated && isValidHl7Content(generated)) {
         loadMessage(generated);
-        // Clean up localStorage after successful load
         localStorage.removeItem('generated_hl7');
       } else if (generated) {
         console.warn('Invalid HL7 content detected in localStorage, ignoring');
         localStorage.removeItem('generated_hl7');
       }
-      // Clean up URL
       window.history.replaceState({}, '', '/');
     }
   }, [loadMessage]);
@@ -175,6 +228,18 @@ export default function Home() {
             activePage="home"
             onNewMessage={handleNewMessage}
             onLoadExample={() => setShowTemplateModal(true)}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            searchResults={searchResults}
+            searchSelectedIndex={searchSelectedIndex}
+            onSearchSelectNext={searchSelectNext}
+            onSearchSelectPrevious={searchSelectPrevious}
+            onSearchClear={searchClear}
+            isSearching={isSearching}
+            isSearchOpen={isSearchOpen}
+            onSearchOpenChange={setSearchOpen}
+            onSearchResultSelect={handleSearchResultSelect}
+            hasSearchContent={segments.length > 0}
           />
         </div>
       </div>
@@ -313,9 +378,9 @@ export default function Home() {
                         </svg>
                       </div>
                       <h2 className="text-lg font-bold text-foreground">Visual Editor</h2>
+                      <ValidationBadge validationResult={validationResult} />
                     </div>
                     <div className="flex gap-2">
-                      {/* Undo/Redo buttons */}
                       <button
                         onClick={undo}
                         disabled={!canUndo}
@@ -336,7 +401,7 @@ export default function Home() {
                       >
                         <Redo2 className="h-4 w-4" />
                       </button>
-                      <div className="w-px bg-border mx-1" /> {/* Separator */}
+                      <div className="w-px bg-border mx-1" />
                       <button
                         onClick={handleCopyToClipboard}
                         disabled={!rawInput}
@@ -405,7 +470,13 @@ export default function Home() {
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <ErrorBoundary>
-                      <MessageEditor segments={segments} onUpdate={updateSegments} />
+                      <MessageEditor
+                        segments={segments}
+                        onUpdate={updateSegments}
+                        highlightedField={highlightedField}
+                        expandedSegments={expandedSegments}
+                        onExpandedSegmentsChange={setExpandedSegments}
+                      />
                     </ErrorBoundary>
                   </div>
                 </div>

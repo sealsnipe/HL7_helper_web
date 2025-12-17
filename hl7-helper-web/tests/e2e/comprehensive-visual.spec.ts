@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const VIEWPORTS = {
   desktop: { width: 1920, height: 1080 },
@@ -16,7 +16,7 @@ PV1|1|I|ICU^101^A|E|||12345^DOC^JOHN^^^MD|||MED||||ADM|INS|||12345^DOC^JOHN^^^MD
 const LIVE_PARSE_DELAY = 500; // Debounce + rendering buffer
 
 // Helper function to fill textarea and wait for live parsing
-async function fillAndWaitForParse(page: import('@playwright/test').Page, text: string) {
+async function fillAndWaitForParse(page: Page, text: string) {
   const textarea = page.locator('textarea[placeholder*="MSH"]');
   await textarea.fill(text);
   await page.waitForTimeout(LIVE_PARSE_DELAY);

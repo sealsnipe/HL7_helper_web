@@ -6,12 +6,13 @@ import { SimpleField, CompositeField, RepetitionField } from './fields';
  * Props for the FieldInput component
  */
 interface Props {
-    field: FieldDto;
-    definition: FieldDefinition | null;
-    onChange: (value: string, updatedField?: FieldDto) => void;
-    highlightVariable?: boolean;
-    variableValues?: Map<string, string>;
-    onVariableChange?: (variableId: string, value: string) => void;
+  field: FieldDto;
+  definition: FieldDefinition | null;
+  onChange: (value: string, updatedField?: FieldDto) => void;
+  highlightVariable?: boolean;
+  variableValues?: Map<string, string>;
+  onVariableChange?: (variableId: string, value: string) => void;
+  isSearchHighlighted?: boolean;
 }
 
 /**
@@ -23,18 +24,18 @@ interface Props {
  * - SimpleField: Simple single-value fields
  */
 export const FieldInput: React.FC<Props> = (props) => {
-    const { field } = props;
+  const { field } = props;
 
-    // Repetition fields take priority (they may contain components within repetitions)
-    if (field.repetitions && field.repetitions.length > 0) {
-        return <RepetitionField {...props} />;
-    }
+  // Repetition fields take priority (they may contain components within repetitions)
+  if (field.repetitions && field.repetitions.length > 0) {
+    return <RepetitionField {...props} />;
+  }
 
-    // Composite fields with components
-    if (field.components && field.components.length > 0) {
-        return <CompositeField {...props} />;
-    }
+  // Composite fields with components
+  if (field.components && field.components.length > 0) {
+    return <CompositeField {...props} />;
+  }
 
-    // Simple single-value fields
-    return <SimpleField {...props} />;
+  // Simple single-value fields
+  return <SimpleField {...props} />;
 };
