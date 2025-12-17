@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageEditor } from '@/components/MessageEditor';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ValidationBadge } from '@/components/ValidationBadge';
 import { useHl7Editor, isValidHl7Content } from '@/hooks/useHl7Editor';
@@ -56,7 +55,6 @@ export default function Home() {
 
   // UI-specific state (not related to HL7 parsing/editing)
   const [showTemplateModal, setShowTemplateModal] = useState<boolean>(false);
-  const [showNewMessageConfirm, setShowNewMessageConfirm] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [highlightedField, setHighlightedField] = useState<HighlightedField | null>(null);
   const [expandedSegments, setExpandedSegments] = useState<Set<number>>(new Set());
@@ -75,19 +73,6 @@ export default function Home() {
   }, []);
 
   // UI handlers
-  const handleNewMessage = () => {
-    setShowNewMessageConfirm(true);
-  };
-
-  const handleNewMessageConfirm = () => {
-    clearMessage();
-    setShowNewMessageConfirm(false);
-  };
-
-  const handleNewMessageCancel = () => {
-    setShowNewMessageConfirm(false);
-  };
-
   const handleClear = () => {
     clearMessage();
   };
@@ -272,24 +257,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* New Message Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showNewMessageConfirm}
-        title="Clear Current Message"
-        message="Are you sure you want to clear the current message? This action cannot be undone."
-        confirmLabel="Clear"
-        cancelLabel="Cancel"
-        onConfirm={handleNewMessageConfirm}
-        onCancel={handleNewMessageCancel}
-        variant="destructive"
-      />
-
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <NavigationHeader
             activePage="home"
-            onNewMessage={handleNewMessage}
             onLoadExample={() => setShowTemplateModal(true)}
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
