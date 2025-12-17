@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, use, Suspense } from 'react';
 import { Template } from '@/types/template';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
@@ -13,15 +13,110 @@ import { fieldContainsVariable, getVariableCount, getVariableBadgeColor, applyVa
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DataManagement } from '@/components/persistence';
 import { runMigrations } from '@/services/persistence/migrations';
+import { TemplatesSkeleton } from '@/components/TemplatesSkeleton';
 
 // View mode for HELPERVARIABLE filtering
 type VariableViewMode = 'all' | 'variables-only';
 
+/**
+ * Extract message type from HL7 content (MSH-9 field)
+ */
+function extractMessageType(hl7Content: string): string {
+    try {
+        const mshSegment = hl7Content.split(/\r|\n/)[0];
+        const fields = mshSegment.split('|');
+        if (fields.length >= 9) {
+            const messageTypeField = fields[8]; // MSH-9
+            return messageTypeField.replace('^', '-');
+        }
+    } catch {
+        // Fallback
+    }
+    return 'UNKNOWN';
+}
+
+/**
+ * Load templates from storage, initializing with defaults if empty.
+ */
+async function loadInitialTemplates(): Promise<Template[]> {
+    await runMigrations();
+    const customTemplates = await loadTemplatesFromStorage();
+
+    if (customTemplates.length === 0) {
+        const timestamp = Date.now();
+        const defaultTemplates: Template[] = Object.entries(SAMPLE_TEMPLATES).map(([name, content], idx) => ({
+            id: `default-${idx}`,
+            name,
+            description: 'Standard Example',
+            messageType: extractMessageType(content),
+            content,
+            createdAt: timestamp
+        }));
+        await saveTemplatesToStorage(defaultTemplates);
+        return defaultTemplates;
+    }
+    return customTemplates;
+}
+
+// Module-level promise cache for React 19 use() hook
+let templatesPromise: Promise<Template[]> | null = null;
+
+function getTemplatesPromise(): Promise<Template[]> {
+    if (!templatesPromise) {
+        templatesPromise = loadInitialTemplates();
+    }
+    return templatesPromise;
+}
+
+function resetTemplatesPromise(): void {
+    templatesPromise = null;
+}
+
+
+/**
+ * Shell component for consistent page layout.
+ */
+function PageShell({ children }: { children: React.ReactNode }) {
+    return (
+        <main className="min-h-screen bg-background font-sans transition-colors text-foreground">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <NavigationHeader activePage="templates" />
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+                {children}
+            </div>
+        </main>
+    );
+}
+
+
 export default function TemplatesPage() {
-    const [templates, setTemplates] = useState<Template[]>([]);
+    return (
+        <Suspense fallback={<PageShell><TemplatesSkeleton /></PageShell>}>
+            <TemplateLoader />
+        </Suspense>
+    );
+}
+
+/**
+ * Uses React 19's use() hook to suspend while templates load
+ */
+function TemplateLoader() {
+    const templates = use(getTemplatesPromise());
+    return <TemplateContent initialTemplates={templates} />;
+}
+
+/**
+ * Main content component - receives pre-loaded templates
+ */
+function TemplateContent({ initialTemplates }: { initialTemplates: Template[] }) {
+    const [templates, setTemplates] = useState<Template[]>(initialTemplates);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
     // Edit state
     const [editName, setEditName] = useState('');
@@ -38,22 +133,6 @@ export default function TemplatesPage() {
     // Delete confirmation dialog state
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-    /**
-     * Extract message type from HL7 content (MSH-9 field)
-     */
-    const extractMessageType = (hl7Content: string): string => {
-        try {
-            const mshSegment = hl7Content.split(/\r|\n/)[0];
-            const fields = mshSegment.split('|');
-            if (fields.length >= 9) {
-                const messageTypeField = fields[8]; // MSH-9
-                return messageTypeField.replace('^', '-');
-            }
-        } catch {
-            // Fallback
-        }
-        return 'UNKNOWN';
-    };
 
     /**
      * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors
@@ -88,41 +167,6 @@ export default function TemplatesPage() {
         });
     };
 
-    const loadTemplates = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            // Run migrations first
-            await runMigrations();
-
-            // Load templates from storage
-            const customTemplates = await loadTemplatesFromStorage();
-
-            if (customTemplates.length === 0) {
-                // No valid templates found, create defaults
-                const timestamp = Date.now();
-                const defaultTemplates: Template[] = Object.entries(SAMPLE_TEMPLATES).map(([name, content], idx) => ({
-                    id: `default-${idx}`,
-                    name,
-                    description: "Standard Example",
-                    messageType: extractMessageType(content),
-                    content,
-                    createdAt: timestamp
-                }));
-                await saveTemplatesToStorage(defaultTemplates);
-                setTemplates(defaultTemplates);
-            } else {
-                setTemplates(customTemplates);
-            }
-        } catch (error) {
-            console.error('Failed to load templates:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadTemplates();
-    }, [loadTemplates]);
 
     // Parse content when it changes (for expanded view)
     // Apply variable editability to set variableId and variableGroupId for badge display
@@ -172,6 +216,7 @@ export default function TemplatesPage() {
         const updated = [...templates, newTemplate];
         setTemplates(updated);
         await saveTemplatesToStorage(updated);
+        resetTemplatesPromise(); // Invalidate cache after mutation
 
         // Auto expand and edit
         setExpandedId(newId);
@@ -214,6 +259,7 @@ export default function TemplatesPage() {
 
         setTemplates(updatedTemplates);
         await saveTemplatesToStorage(updatedTemplates);
+        resetTemplatesPromise(); // Invalidate cache after mutation
         setEditingId(null);
         // Keep expanded to show result? Or collapse?
         // User requirement: "Changes in edit mode should only be saved when the user explicitly clicks 'Save'."
@@ -230,6 +276,7 @@ export default function TemplatesPage() {
         const updated = templates.filter(t => t.id !== deleteConfirm.id);
         setTemplates(updated);
         await saveTemplatesToStorage(updated);
+        resetTemplatesPromise(); // Invalidate cache after mutation
         if (expandedId === deleteConfirm.id) setExpandedId(null);
         setDeleteConfirm(null);
     };
@@ -262,6 +309,7 @@ export default function TemplatesPage() {
         const updated = [...templates, newTemplate];
         setTemplates(updated);
         await saveTemplatesToStorage(updated);
+        resetTemplatesPromise(); // Invalidate cache after mutation
 
         setExpandedId(newId);
         startEditing(newTemplate);
@@ -312,17 +360,8 @@ export default function TemplatesPage() {
 
 
     return (
-        <main className="min-h-screen bg-background font-sans transition-colors text-foreground">
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <NavigationHeader activePage="templates" />
-                </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-
-                <div className="flex justify-between items-center">
+        <PageShell>
+            <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-foreground">Template Management</h2>
                     <button
                         onClick={handleCreate}
@@ -342,14 +381,7 @@ export default function TemplatesPage() {
                     </div>
 
                     <div className="divide-y divide-border">
-                        {isLoading ? (
-                            <div className="p-8 text-center text-muted-foreground">
-                                <div className="flex items-center justify-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                    <span>Loading templates...</span>
-                                </div>
-                            </div>
-                        ) : templates.length === 0 ? (
+                        {templates.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground">
                                 No templates found. Create one to get started.
                             </div>
@@ -558,10 +590,9 @@ export default function TemplatesPage() {
                     </div>
                 </div>
 
-                {/* Data Management Section */}
-                <div className="bg-card rounded-lg shadow border border-border overflow-hidden">
-                    <DataManagement />
-                </div>
+            {/* Data Management Section */}
+            <div className="bg-card rounded-lg shadow border border-border overflow-hidden">
+                <DataManagement />
             </div>
 
             {/* Delete Confirmation Dialog */}
@@ -575,6 +606,6 @@ export default function TemplatesPage() {
                 onCancel={handleDeleteCancel}
                 variant="destructive"
             />
-        </main>
+        </PageShell>
     );
 }

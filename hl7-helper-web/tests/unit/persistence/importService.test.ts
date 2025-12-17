@@ -14,9 +14,9 @@ const validBundle: ExportBundle = {
       updatedAt: '2025-01-15T09:30:00.000Z',
       checksum: 'abc123',
       data: [
-        { id: '1', name: 'Template 1', content: 'MSH|...', variables: [] },
-        { id: '2', name: 'Template 2', content: 'MSH|...', variables: [] },
-        { id: '3', name: 'Template 3', content: 'MSH|...', variables: [] },
+        { id: '1', name: 'Template 1', description: 'Test template 1', messageType: 'ADT-A01', content: 'MSH|...', createdAt: 1705312800000 },
+        { id: '2', name: 'Template 2', description: 'Test template 2', messageType: 'ADT-A01', content: 'MSH|...', createdAt: 1705312800000 },
+        { id: '3', name: 'Template 3', description: 'Test template 3', messageType: 'ADT-A01', content: 'MSH|...', createdAt: 1705312800000 },
       ]
     } as StorageEnvelope<any>,
     settings: {

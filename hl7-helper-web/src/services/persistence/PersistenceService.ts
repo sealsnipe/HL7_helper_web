@@ -21,9 +21,24 @@ import {
   verifyChecksum,
   migrateEnvelope,
 } from '@/utils/storageUtils';
+import {
+  TemplateArraySchema,
+  UserSettingsSchema,
+  SerializationStateSchema,
+} from '@/schemas';
+import type { ZodSchema } from 'zod';
 
 const CURRENT_VERSION = 1;
 const MAX_BACKUPS_PER_KEY = 5;
+
+/**
+ * Schema map for validating data by storage key
+ */
+const SCHEMA_MAP: Partial<Record<StorageKey, ZodSchema>> = {
+  [StorageKey.TEMPLATES]: TemplateArraySchema,
+  [StorageKey.SETTINGS]: UserSettingsSchema,
+  [StorageKey.SERIALIZATION_STATE]: SerializationStateSchema,
+};
 
 /**
  * Main persistence service with adapter fallback and envelope management
@@ -58,6 +73,32 @@ class PersistenceService implements IPersistenceService {
   registerMigration<T>(targetVersion: number, migration: MigrationFunction<T>): void {
     this.migrations.set(targetVersion, migration as MigrationFunction);
   }
+
+  /**
+   * Validate data against schema for a given storage key
+   * Returns validated data or null if validation fails
+   */
+  private validateData<T>(key: StorageKey, data: unknown): T | null {
+    const schema = SCHEMA_MAP[key];
+
+    // No schema defined for this key - pass through without validation
+    if (!schema) {
+      return data as T;
+    }
+
+    const result = schema.safeParse(data);
+
+    if (!result.success) {
+      console.warn(
+        `[PersistenceService] Schema validation failed for ${key}:`,
+        result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ')
+      );
+      return null;
+    }
+
+    return result.data as T;
+  }
+
 
   /**
    * Save data with automatic envelope wrapping
@@ -119,7 +160,19 @@ class PersistenceService implements IPersistenceService {
         await this.adapter.set(key, envelope);
       }
 
-      return unwrapEnvelope(envelope);
+      // Unwrap envelope to get raw data
+      const rawData = unwrapEnvelope(envelope);
+
+      // Validate data against schema (returns null if validation fails)
+      const validatedData = this.validateData<T>(key, rawData);
+
+      if (validatedData === null && rawData !== null) {
+        // Data exists but failed validation - log but do not crash
+        console.warn(`[PersistenceService] Data for ${key} failed schema validation, returning null`);
+        return null;
+      }
+
+      return validatedData;
     } catch (error) {
       console.error(`[PersistenceService] Error loading ${key}:`, error);
       throw error;
@@ -214,6 +267,18 @@ class PersistenceService implements IPersistenceService {
           // Verify checksum
           if (!verifyChecksum(envelope as StorageEnvelope<unknown>)) {
             throw new Error('Checksum verification failed - data may be corrupted');
+          }
+
+          // Validate data payload against schema
+          const schema = SCHEMA_MAP[storageKey];
+          if (schema) {
+            const validationResult = schema.safeParse(envelope.data);
+            if (!validationResult.success) {
+              const errorMessages = validationResult.error.issues
+                .map((i) => `${i.path.join('.')}: ${i.message}`)
+                .join('; ');
+              throw new Error(`Data validation failed: ${errorMessages}`);
+            }
           }
 
           // Apply migrations if needed
