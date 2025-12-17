@@ -17,7 +17,9 @@
     "test:visual": "playwright test tests/e2e/visual.spec.ts",
     "test:visual:update": "playwright test tests/e2e/visual.spec.ts --update-snapshots",
     "test:a11y": "playwright test tests/e2e/accessibility.spec.ts",
-    "test:all": "npm run lint && npm run test:coverage && npm run test:e2e && npm run test:visual && npm run test:a11y"
+    "test:all": "npm run lint && npm run test:coverage && npm run test:e2e && npm run test:visual && npm run test:a11y",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "lucide-react": "^0.554.0",
@@ -28,7 +30,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
+    "@next/bundle-analyzer": "^16.0.10",
     "@playwright/test": "^1.57.0",
+    "@storybook/addon-a11y": "^10.1.9",
+    "@storybook/addon-docs": "^10.1.9",
+    "@storybook/addon-onboarding": "^10.1.9",
+    "@storybook/nextjs-vite": "^10.1.9",
     "@stryker-mutator/core": "^9.4.0",
     "@stryker-mutator/vitest-runner": "^9.4.0",
     "@tailwindcss/postcss": "^4",
@@ -42,7 +49,9 @@
     "@vitest/coverage-v8": "^4.0.15",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
+    "eslint-plugin-storybook": "^10.1.9",
     "jsdom": "^27.3.0",
+    "storybook": "^10.1.9",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.15"
