@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { SearchBar } from '@/components/SearchBar';
 import { SearchMatch } from '@/utils/fieldSearch';
@@ -41,6 +42,7 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   onSearchResultSelect,
   hasSearchContent = false,
 }) => {
+  const router = useRouter();
   const isHome = activePage === 'home';
 
   // Handle Ctrl+K / Cmd+K keyboard shortcut
@@ -63,20 +65,36 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
     }
   }, [isHome, handleGlobalKeyDown, onSearchOpenChange]);
 
-  // Render "Load Example" button - only on home page
-  const renderLoadExampleButton = () => {
-    // Only show on home page when handler is provided
-    if (!isHome || !onLoadExample) {
-      return null;
+  // Render action button based on current page:
+  // - Home page: "Load Example Message" (triggers onLoadExample)
+  // - Other pages: "New Message" (navigates to home page)
+  const renderActionButton = () => {
+    if (isHome) {
+      // On home page: show "Load Example Message" if handler provided
+      if (!onLoadExample) {
+        return null;
+      }
+      return (
+        <button
+          onClick={onLoadExample}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
+          data-testid="load-example-button"
+        >
+          Load Example Message
+        </button>
+      );
+    } else {
+      // On other pages: show "New Message" button that navigates to home
+      return (
+        <button
+          onClick={() => router.push('/')}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
+          data-testid="new-message-button"
+        >
+          New Message
+        </button>
+      );
     }
-    return (
-      <button
-        onClick={onLoadExample}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shadow-sm transition-all"
-      >
-        Load Example Message
-      </button>
-    );
   };
 
   // Render search bar (only on home page with search props)
@@ -137,7 +155,7 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
           Serialize from Template
         </Link>
 
-        {renderLoadExampleButton()}
+        {renderActionButton()}
       </div>
     </header>
   );
