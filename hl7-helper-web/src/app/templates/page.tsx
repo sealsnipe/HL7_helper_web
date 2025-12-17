@@ -7,7 +7,7 @@ import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { MessageEditor } from '@/components/MessageEditor';
 import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
-import { SegmentDto } from '@/types';
+import { SegmentDto, FieldDto } from '@/types';
 import { loadTemplatesFromStorage, saveTemplatesToStorage } from '@/utils/templateValidation';
 import {
   fieldContainsVariable,
@@ -136,6 +136,10 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   // Parsed segments for the currently expanded/editing template
   const [segments, setSegments] = useState<SegmentDto[]>([]);
 
+  // Full segments - stores complete unfiltered segments to prevent data loss
+  // when editing in "Variables Only" mode
+  const [fullSegments, setFullSegments] = useState<SegmentDto[]>([]);
+
   // HELPERVARIABLE view mode
   const [variableViewMode, setVariableViewMode] = useState<VariableViewMode>('all');
 
@@ -189,16 +193,21 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
     if (expandedId) {
       if (editingId) {
         const parsed = parseHl7Message(editContent);
-        setSegments(applyVariableEditability(parsed));
+        const withVariables = applyVariableEditability(parsed);
+        setSegments(withVariables);
+        setFullSegments(withVariables);
       } else {
         const template = templates.find((t) => t.id === expandedId);
         if (template) {
           const parsed = parseHl7Message(template.content);
-          setSegments(applyVariableEditability(parsed));
+          const withVariables = applyVariableEditability(parsed);
+          setSegments(withVariables);
+          setFullSegments(withVariables);
         }
       }
     } else {
       setSegments([]);
+      setFullSegments([]);
     }
   }, [expandedId, editingId, editContent, templates]);
 
@@ -334,16 +343,42 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   };
 
   // Handle updates from MessageEditor
+  // This function merges filtered segment updates back into fullSegments to prevent data loss
+  // when editing in "Variables Only" mode (where displaySegments is a filtered subset)
   const handleEditorUpdate = (updatedSegments: SegmentDto[]) => {
     if (!editingId) return; // Should only happen in edit mode
 
     // Mark that we should skip the next parse since we're setting segments directly
     skipNextParse.current = true;
 
-    // Regenerate HL7 string
-    const newHl7 = generateHl7Message(updatedSegments);
+    // Create map of updates for quick lookup: segmentId -> (fieldPosition -> FieldDto)
+    const updatedMap = new Map<string, Map<number, FieldDto>>();
+    updatedSegments.forEach((seg) => {
+      const fieldMap = new Map<number, FieldDto>();
+      seg.fields.forEach((field) => {
+        fieldMap.set(field.position, field);
+      });
+      updatedMap.set(seg.id, fieldMap);
+    });
+
+    // Merge updates into fullSegments (preserves non-edited segments and fields)
+    const mergedSegments = fullSegments.map((seg) => {
+      const updatedFieldMap = updatedMap.get(seg.id);
+      if (!updatedFieldMap) return seg; // Segment wasn't in the edited set, keep as-is
+      return {
+        ...seg,
+        fields: seg.fields.map((field) => {
+          const updatedField = updatedFieldMap.get(field.position);
+          return updatedField ?? field; // Use updated field if available, otherwise keep original
+        }),
+      };
+    });
+
+    // Generate HL7 from FULL merged segments (not filtered)
+    const newHl7 = generateHl7Message(mergedSegments);
     setEditContent(newHl7);
-    setSegments(updatedSegments); // Update local segments state to reflect change immediately
+    setSegments(mergedSegments);
+    setFullSegments(mergedSegments);
   };
 
   // Prepare segments for display
