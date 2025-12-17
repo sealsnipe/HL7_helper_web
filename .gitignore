@@ -45,3 +45,16 @@ debug_log.txt
 *.log
 screenshot_*.png
 api_response*.json
+
+# Visual review (large binary files)
+visual-review-screenshots/
+visual-review/
+
+# Windows artifacts
+nul
+*.backup
+*.bak
+
+# Playwright test artifacts
+playwright-report/
+test-results/

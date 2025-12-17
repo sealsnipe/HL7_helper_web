@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright
+/playwright-report/
+/test-results/
+/reports/
+/tests/baselines/
+
+# Visual review screenshots (large binary files)
+/visual-review-screenshots/
+
+# Backup files
+*.backup
+*.bak
+
+# Windows artifacts
+nul
