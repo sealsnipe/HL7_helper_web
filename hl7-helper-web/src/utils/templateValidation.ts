@@ -2,6 +2,8 @@ import { Template } from '@/types/template';
 import { getPersistenceService } from '@/services/persistence';
 import { StorageKey } from '@/types/persistence';
 
+const LEGACY_RAW_TEMPLATES_KEY = 'hl7-helper:templates';
+
 /**
  * Type guard to validate a single Template object
  */
@@ -29,6 +31,17 @@ function isValidTemplateArray(data: unknown): data is Template[] {
   return Array.isArray(data) && data.every(isValidTemplate);
 }
 
+function loadLegacyTemplatesFromLocalStorage(): Template[] | null {
+  try {
+    const raw = window.localStorage.getItem(LEGACY_RAW_TEMPLATES_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return isValidTemplateArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Load templates from persistence storage
  * Returns empty array if data is invalid or missing
@@ -45,6 +58,11 @@ export async function loadTemplatesFromStorage(): Promise<Template[]> {
     const templates = await service.load<Template[]>(StorageKey.TEMPLATES);
 
     if (!templates) {
+      const legacyTemplates = loadLegacyTemplatesFromLocalStorage();
+      if (legacyTemplates) {
+        await service.save(StorageKey.TEMPLATES, legacyTemplates);
+        return legacyTemplates;
+      }
       return [];
     }
 

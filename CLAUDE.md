@@ -21,6 +21,7 @@ D:\Projects\HL7_Helper_web\
 ├── .claude/agents/              ← Your team
 │   ├── developer.md
 │   ├── code-reviewer.md
+│   ├── codex-cli.md             ← Second opinion (GPT-4o)
 │   ├── test-developer.md
 │   ├── visual-reviewer.md
 │   └── ux-specialist.md
@@ -65,6 +66,7 @@ D:\Projects\HL7_Helper_web\
 |-------|---------|----------------|
 | Developer | `@developer` | Implements code, defines test specifications |
 | Code-Reviewer | `@code-reviewer` | Reviews code quality, security, design |
+| Codex-CLI | `codex review` | Second-opinion review (GPT-4o via OpenAI Codex CLI) |
 | Test-Developer | `@test-developer` | Writes tests based on developer's spec |
 | Visual-Reviewer | `@visual-reviewer` | Live browser inspection via MCP (UI changes only) |
 | UX-Specialist | `@ux-specialist` | Documents flows AND analyzes for problems (unified) |
@@ -164,20 +166,23 @@ MCP-Server können Browser-Daten einsehen. Keine sensitiven Seiten während Test
                                        │ • Test Specification  
                                        │ • hasVisualChanges: yes/no
                                        │
-             ┌─────────────────────────┼─────────────────────────┐
-             │                         │                         │
-             ▼                         ▼                         ▼
-    ┌──────────────┐          ┌───────────────┐         ┌──────────────┐
-    │@code-reviewer│          │@test-developer│         │@visual-review│
-    │              │          │               │         │ (if UI)      │
-    │ Code quality │          │ Write tests   │         │              │
-    └──────┬───────┘          └───────┬───────┘         │ MCP Browser: │
-           │                          │                 │ • 1920x1080  │
-           │                          │                 │ • All states │
-           │                          │                 │ • All themes │
-           │                          │                 └──────┬───────┘
-           │                          │                        │
-           └──────────────────────────┴────────────────────────┘
+       ┌─────────────┬─────────────┼─────────────┬─────────────┐
+       │             │             │             │             │
+       ▼             ▼             ▼             ▼             ▼
+┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
+│@code-      │ │@codex-cli  │ │@test-      │ │@visual-    │ │(parallel   │
+│reviewer    │ │(2nd opinion)│ │developer   │ │reviewer    │ │execution)  │
+│            │ │            │ │            │ │(if UI)     │ │            │
+│Code quality│ │GPT-4o      │ │Write tests │ │MCP Browser │ │            │
+└─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └────────────┘
+      │              │              │              │
+      └──────────────┴──────────────┴──────────────┘
+                                    │
+                                    ▼
+                           ┌─────────────────┐
+                           │ Consolidate     │
+                           │ Reviews         │
+                           └────────┬────────┘
                                        │
                                        ▼
                               ┌─────────────────┐
@@ -251,26 +256,31 @@ MCP-Server können Browser-Daten einsehen. Keine sensitiven Seiten während Test
 
 ## Workflow Summary
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│ NON-UI CHANGES                                                         │
-├────────────────────────────────────────────────────────────────────────┤
-│ Task → @developer → [@code-reviewer + @test-developer] → Tests → Done  │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ NON-UI CHANGES                                                                  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Task → @developer → [@code-reviewer + @codex-cli + @test-developer] → Tests     │
+│                                      ↓                                          │
+│                              Consolidate → Fix → Done                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────────────┐
-│ UI CHANGES                                                             │
-├────────────────────────────────────────────────────────────────────────┤
-│ Task → @developer → [@code-reviewer + @test-developer + @visual-reviewer]
-│                                    ↓                                   │
-│                        @ux-specialist → Tests → Done                   │
-│                                                                        │
-│ @visual-reviewer verwendet MCP Browser:                                │
-│   1. Dev Server muss laufen (npm run dev)                              │
-│   2. Primary Viewport: 1920x1080                                       │
-│   3. Teste alle States: Empty, Loaded, Editing, Error                  │
-│   4. Teste Themes: Light, Dark + mindestens 1 Custom (7 verfügbar)     │
-│   5. Prüfe Console auf Errors                                          │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ UI CHANGES                                                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Task → @developer → [@code-reviewer + @codex-cli + @test-developer +            │
+│                      @visual-reviewer]                                          │
+│                                      ↓                                          │
+│                      Consolidate → @ux-specialist → Tests → Done                │
+│                                                                                 │
+│ @visual-reviewer verwendet MCP Browser:                                         │
+│   1. Dev Server muss laufen (npm run dev)                                       │
+│   2. Primary Viewport: 1920x1080                                                │
+│   3. Teste alle States: Empty, Loaded, Editing, Error                           │
+│   4. Teste Themes: Light, Dark + mindestens 1 Custom (7 verfügbar)              │
+│   5. Prüfe Console auf Errors                                                   │
+│                                                                                 │
+│ @codex-cli provides second opinion via GPT-4o                                   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## How You Work
@@ -321,7 +331,11 @@ After developer completes, delegate in parallel:
 @code-reviewer Review the changes in [files]
 
 @test-developer Write tests based on the test specification
+
+codex review --uncommitted "Focus on: bugs, security, edge cases, HL7 correctness"
 ```
+
+The `codex review` command runs OpenAI's GPT-4o as a second-opinion reviewer alongside @code-reviewer.
 
 **If `hasVisualChanges: yes`:**
 
@@ -352,17 +366,55 @@ Analyze UI changes via MCP Browser
 - [specific areas from developer's hasVisualChanges section]
 ```
 
+### Step 3b: Consolidate Reviews
+
+After all parallel reviews complete, consolidate findings:
+
+| Scenario | Action |
+|----------|--------|
+| All reviewers agree | Proceed with fixes or next step |
+| Disagreement on severity | Address higher severity first |
+| Conflicting recommendations | Escalate to user with both perspectives |
+| @codex-cli finds issue @code-reviewer missed | Add to fix list |
+| @code-reviewer finds issue @codex-cli missed | Add to fix list |
+| Both find same critical issue | High confidence - must fix |
+
+**Review Consolidation Template:**
+```markdown
+## Review Consolidation
+
+### Agreement
+- [Issues both reviewers found]
+
+### @code-reviewer Only
+- [Issues only Claude found]
+
+### @codex-cli Only
+- [Issues only GPT-4o found]
+
+### Conflicts (if any)
+- [Describe conflict and recommendation]
+
+### Combined Fix List
+1. [Critical issues first]
+2. [Major issues]
+3. [Minor issues]
+```
+
 ### Step 4: Handle Code Review Issues
 
-If issues found by @reviewer or @visual-reviewer:
+If issues found by @code-reviewer, @codex-cli, or @visual-reviewer:
 ```
 @developer Fix the following issues:
 
-## From Reviewer
+## From @code-reviewer
 - [issue 1]
 - [issue 2]
 
-## From Visual-Reviewer
+## From @codex-cli (GPT-4o)
+- [issue 1]
+
+## From @visual-reviewer
 - [visual issue 1]
 ```
 
@@ -465,22 +517,30 @@ All must pass before marking done:
 ### Non-UI Task
 ```
 1. @developer [task]
-2. @code-reviewer [review code]
-   @test-developer [write tests]
-3. Run tests
-4. Done
+2. In parallel:
+   - @code-reviewer [review code]
+   - codex review --uncommitted [second opinion]
+   - @test-developer [write tests]
+3. Consolidate reviews
+4. @developer [fix issues if any]
+5. Run tests
+6. Done
 ```
 
 ### UI Task
 ```
 1. @developer [task]
 2. Ensure: npm run dev (Dev Server running)
-3. @code-reviewer [review code]
-   @test-developer [write tests]
-   @visual-reviewer [MCP browser inspection at 1920x1080]
-4. @ux-specialist [document + analyze flows]
-5. Run tests
-6. Done
+3. In parallel:
+   - @code-reviewer [review code]
+   - codex review --uncommitted [second opinion]
+   - @test-developer [write tests]
+   - @visual-reviewer [MCP browser inspection at 1920x1080]
+4. Consolidate reviews
+5. @developer [fix issues if any]
+6. @ux-specialist [document + analyze flows]
+7. Run tests
+8. Done
 ```
 
 ### UX-Only Task
@@ -551,6 +611,10 @@ npm run dev
 | Dev Server not running | Start: `cd hl7-helper-web && npm run dev` |
 | 3+ review cycles without resolution | Escalate to user |
 | Major architecture decision | Present options to user |
+| @code-reviewer and @codex-cli agree | High confidence, proceed |
+| @code-reviewer and @codex-cli disagree on severity | Address higher severity |
+| @code-reviewer and @codex-cli have conflicting fixes | Escalate to user |
+| Codex CLI not installed | `npm install -g @openai/codex` |
 
 ## Communication
 
@@ -613,6 +677,8 @@ Next: [Immediate next action]
 - ❌ Skipping @ux-specialist for UI changes
 - ❌ Infinite review loops (max 3, then escalate)
 - ❌ Forgetting to `cd hl7-helper-web` before running commands
+- ❌ Running @codex-cli without @code-reviewer (second opinion needs first opinion)
+- ❌ Letting one reviewer override the other without escalation on conflicts
 
 ## Periodic Tasks
 
