@@ -23,6 +23,9 @@ interface Props {
   highlightedField?: HighlightedField | null;
   expandedSegments?: Set<number>;
   onExpandedSegmentsChange?: (expanded: Set<number>) => void;
+  // Optional message type override (e.g., "ADT^A01") - used when MSH segment is not available
+  // such as in "Variables Only" mode on templates page
+  messageType?: string;
 }
 
 export const MessageEditor: React.FC<Props> = ({
@@ -34,6 +37,7 @@ export const MessageEditor: React.FC<Props> = ({
   highlightedField,
   expandedSegments: controlledExpanded,
   onExpandedSegmentsChange,
+  messageType: messageTypeProp,
 }) => {
   // State to track expanded segments by index (internal state if not controlled)
   const [internalExpanded, setInternalExpanded] = React.useState<Set<number>>(new Set());
@@ -59,8 +63,15 @@ export const MessageEditor: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segments.length]);
 
-  // Determine message type
+  // Determine message type - use prop if provided, otherwise extract from MSH-9
   const messageType = React.useMemo(() => {
+    // If messageType prop is provided, use it directly
+    // This is important for "Variables Only" mode where MSH segment may be filtered out
+    if (messageTypeProp) {
+      return messageTypeProp;
+    }
+
+    // Fall back to extracting from MSH segment (main editor page behavior)
     const msh = segments.find((s) => s.name === 'MSH');
     if (!msh) return null;
 
@@ -76,7 +87,7 @@ export const MessageEditor: React.FC<Props> = ({
 
     // Fallback to value if no components (unlikely for standard HL7 but possible in simple parsing)
     return typeField.value;
-  }, [segments]);
+  }, [segments, messageTypeProp]);
 
   const definition = React.useMemo(() => {
     return messageType ? loadDefinition(messageType) : null;

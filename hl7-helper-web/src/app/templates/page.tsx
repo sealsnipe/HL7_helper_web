@@ -5,6 +5,7 @@ import { Template } from '@/types/template';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { SAMPLE_TEMPLATES } from '@/data/templates';
 import { MessageEditor } from '@/components/MessageEditor';
+import { VariableFieldList } from '@/components/VariableFieldList';
 import { parseHl7Message } from '@/utils/hl7Parser';
 import { generateHl7Message } from '@/utils/hl7Generator';
 import { SegmentDto, FieldDto } from '@/types';
@@ -381,6 +382,12 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
     setFullSegments(mergedSegments);
   };
 
+  // Handle updates from VariableFieldList
+  // Similar to handleEditorUpdate but works with the flat list component
+  const handleVariableListUpdate = (updatedSegments: SegmentDto[]) => {
+    handleEditorUpdate(updatedSegments);
+  };
+
   // Prepare segments for display
   // If editing, we mark them as editable. If not, read-only.
   // IMPORTANT: MSH-1 (field separator) and MSH-2 (encoding characters) must NEVER be editable
@@ -442,7 +449,11 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
             </div>
           ) : (
             templates.map((template) => (
-              <div key={template.id} className="bg-card">
+              <div
+                key={template.id}
+                className="bg-card"
+                data-testid={`template-row-${template.id}`}
+              >
                 {/* Row Header */}
                 <div
                   onClick={() => handleExpand(template.id)}
@@ -474,6 +485,7 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
                         startEditing(template);
                       }}
                       className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium hover:bg-primary/20 transition-colors leading-none whitespace-nowrap"
+                      data-testid={`edit-btn-${template.id}`}
                     >
                       Edit
                     </button>
@@ -509,6 +521,7 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
                               className="w-full p-2 border border-input rounded bg-background text-sm focus:ring-2 focus:ring-ring outline-none"
+                              data-testid="template-name-input"
                             />
                           </div>
                           <div>
@@ -577,12 +590,25 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
                                 </button>
                               </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto border border-border rounded-lg bg-card">
-                              <MessageEditor
-                                segments={displaySegments}
-                                onUpdate={handleEditorUpdate}
-                                highlightVariable={true}
-                              />
+                            <div
+                              className="flex-1 overflow-y-auto border border-border rounded-lg bg-card"
+                              data-testid="template-structured-view"
+                            >
+                              {variableViewMode === 'variables-only' ? (
+                                <VariableFieldList
+                                  segments={fullSegments}
+                                  onUpdate={handleVariableListUpdate}
+                                  messageType={editType.replace('-', '^')}
+                                  isEditable={true}
+                                />
+                              ) : (
+                                <MessageEditor
+                                  segments={displaySegments}
+                                  onUpdate={handleEditorUpdate}
+                                  highlightVariable={true}
+                                  messageType={editType.replace('-', '^')}
+                                />
+                              )}
                             </div>
                           </div>
                         </div>
@@ -598,6 +624,7 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
                           <button
                             onClick={handleSave}
                             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm"
+                            data-testid="template-save-btn"
                           >
                             Save Changes
                           </button>
@@ -647,12 +674,25 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
                             </div>
                           </div>
                           {/* Removed pointer-events-none to allow Expand/Collapse buttons to work */}
-                          <div className="flex-1 overflow-y-auto border border-border rounded-lg bg-card">
-                            <MessageEditor
-                              segments={displaySegments}
-                              onUpdate={() => {}}
-                              highlightVariable={true}
-                            />
+                          <div
+                            className="flex-1 overflow-y-auto border border-border rounded-lg bg-card"
+                            data-testid="template-structured-view"
+                          >
+                            {variableViewMode === 'variables-only' ? (
+                              <VariableFieldList
+                                segments={fullSegments}
+                                onUpdate={() => {}}
+                                messageType={(template.messageType || 'ADT-A01').replace('-', '^')}
+                                isEditable={false}
+                              />
+                            ) : (
+                              <MessageEditor
+                                segments={displaySegments}
+                                onUpdate={() => {}}
+                                highlightVariable={true}
+                                messageType={(template.messageType || 'ADT-A01').replace('-', '^')}
+                              />
+                            )}
                           </div>
                         </div>
                       </div>

@@ -55,6 +55,9 @@ export interface UniqueVariable {
 
   /** Field positions where this variable appears (for context) */
   fieldPositions: string[]; // e.g., ["PV1-1", "PV1-3"]
+
+  /** Field names from HL7 definitions corresponding to fieldPositions */
+  fieldNames: string[]; // e.g., ["Visit Number", "Patient Name"]
 }
 
 /**
@@ -80,7 +83,13 @@ export type InstanceAction =
   | { type: 'REMOVE_INSTANCE'; id: InstanceId }
   | { type: 'DUPLICATE_INSTANCE'; id: InstanceId }
   | { type: 'UPDATE_VARIABLE'; instanceId: InstanceId; variableId: string; value: string }
-  | { type: 'SET_TEMPLATE'; templateId: string; content: string; segments: SegmentDto[]; variables: UniqueVariable[] }
+  | {
+      type: 'SET_TEMPLATE';
+      templateId: string;
+      content: string;
+      segments: SegmentDto[];
+      variables: UniqueVariable[];
+    }
   | { type: 'TOGGLE_EXPAND'; id: InstanceId }
   | { type: 'SET_VIEW_MODE'; mode: ViewMode }
   | { type: 'RESET_INSTANCES' };

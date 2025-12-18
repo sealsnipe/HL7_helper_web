@@ -16,10 +16,7 @@ describe('MessageEditor', () => {
   });
 
   it('renders segments correctly', () => {
-    const segments = [
-      createMockSegment('MSH', 5),
-      createMockSegment('PID', 4),
-    ];
+    const segments = [createMockSegment('MSH', 5), createMockSegment('PID', 4)];
     const onUpdate = vi.fn();
 
     render(<MessageEditor segments={segments} onUpdate={onUpdate} />);
@@ -36,10 +33,15 @@ describe('MessageEditor', () => {
         fields: [
           { position: 1, value: '|', isEditable: false, components: [] },
           { position: 2, value: '^~\\&', isEditable: false, components: [] },
-          { position: 9, value: 'ADT^A01', isEditable: true, components: [
-            { position: 1, value: 'ADT', subComponents: [] },
-            { position: 2, value: 'A01', subComponents: [] },
-          ] },
+          {
+            position: 9,
+            value: 'ADT^A01',
+            isEditable: true,
+            components: [
+              { position: 1, value: 'ADT', subComponents: [] },
+              { position: 2, value: 'A01', subComponents: [] },
+            ],
+          },
         ],
       },
     ];
@@ -58,7 +60,7 @@ describe('MessageEditor', () => {
 
     // Find the first editable input (should be PID-field-1)
     const inputs = screen.getAllByRole('textbox');
-    const editableInput = inputs.find(input => !input.hasAttribute('readonly'));
+    const editableInput = inputs.find((input) => !input.hasAttribute('readonly'));
 
     expect(editableInput).toBeDefined();
 
@@ -83,10 +85,7 @@ describe('MessageEditor', () => {
   });
 
   it('expand all button expands all segments', () => {
-    const segments = [
-      createMockSegment('MSH', 2),
-      createMockSegment('PID', 2),
-    ];
+    const segments = [createMockSegment('MSH', 2), createMockSegment('PID', 2)];
     const onUpdate = vi.fn();
 
     render(<MessageEditor segments={segments} onUpdate={onUpdate} />);
@@ -100,10 +99,7 @@ describe('MessageEditor', () => {
   });
 
   it('collapse all button collapses all segments', () => {
-    const segments = [
-      createMockSegment('MSH', 2),
-      createMockSegment('PID', 2),
-    ];
+    const segments = [createMockSegment('MSH', 2), createMockSegment('PID', 2)];
     const onUpdate = vi.fn();
 
     render(<MessageEditor segments={segments} onUpdate={onUpdate} />);
@@ -122,15 +118,125 @@ describe('MessageEditor', () => {
   });
 
   it('displays segment count', () => {
-    const segments = [
-      createMockSegment('MSH', 5),
-      createMockSegment('PID', 3),
-    ];
+    const segments = [createMockSegment('MSH', 5), createMockSegment('PID', 3)];
     const onUpdate = vi.fn();
 
     render(<MessageEditor segments={segments} onUpdate={onUpdate} />);
 
     expect(screen.getByText('(5 fields)')).toBeInTheDocument();
     expect(screen.getByText('(3 fields)')).toBeInTheDocument();
+  });
+
+  describe('messageType prop', () => {
+    // PROOF: Fails if messageType prop is not used for definition loading
+    it('uses messageType prop when provided', () => {
+      const segments = [createMockSegment('PID', 2)];
+      const onUpdate = vi.fn();
+
+      render(<MessageEditor segments={segments} onUpdate={onUpdate} messageType="ADT^A01" />);
+
+      // messageType should be displayed in header
+      expect(screen.getByText(/ADT\^A01/)).toBeInTheDocument();
+    });
+
+    // PROOF: Fails if messageType prop override is not implemented
+    it('uses messageType prop even without MSH segment', () => {
+      const segments = [createMockSegment('PID', 2), createMockSegment('PV1', 3)];
+      const onUpdate = vi.fn();
+
+      render(<MessageEditor segments={segments} onUpdate={onUpdate} messageType="ORU^R01" />);
+
+      // messageType should be displayed even without MSH
+      expect(screen.getByText(/ORU\^R01/)).toBeInTheDocument();
+    });
+
+    // PROOF: Fails if fallback to MSH-9 extraction is broken
+    it('falls back to MSH-9 extraction when messageType prop not provided', () => {
+      const segments: SegmentDto[] = [
+        {
+          id: 'msh-1',
+          name: 'MSH',
+          fields: [
+            { position: 1, value: '|', isEditable: false, components: [] },
+            { position: 2, value: '^~\\&', isEditable: false, components: [] },
+            {
+              position: 9,
+              value: 'ORU^R01',
+              isEditable: true,
+              components: [
+                { position: 1, value: 'ORU', subComponents: [] },
+                { position: 2, value: 'R01', subComponents: [] },
+              ],
+            },
+          ],
+        },
+      ];
+      const onUpdate = vi.fn();
+
+      render(<MessageEditor segments={segments} onUpdate={onUpdate} />);
+
+      expect(screen.getByText(/ORU\^R01/)).toBeInTheDocument();
+    });
+
+    // PROOF: Fails if empty messageType prop is not handled correctly
+    it('falls back to MSH extraction when messageType prop is empty string', () => {
+      const segments: SegmentDto[] = [
+        {
+          id: 'msh-1',
+          name: 'MSH',
+          fields: [
+            { position: 1, value: '|', isEditable: false, components: [] },
+            { position: 2, value: '^~\\&', isEditable: false, components: [] },
+            {
+              position: 9,
+              value: 'ADT^A01',
+              isEditable: true,
+              components: [
+                { position: 1, value: 'ADT', subComponents: [] },
+                { position: 2, value: 'A01', subComponents: [] },
+              ],
+            },
+          ],
+        },
+      ];
+      const onUpdate = vi.fn();
+
+      render(<MessageEditor segments={segments} onUpdate={onUpdate} messageType="" />);
+
+      // Should not show empty string, should extract from MSH
+      expect(screen.queryByText(/^\(\)$/)).not.toBeInTheDocument();
+      // Should show extracted message type
+      expect(screen.getByText(/ADT\^A01/)).toBeInTheDocument();
+    });
+
+    // PROOF: Fails if messageType prop takes precedence over MSH segment
+    it('gives precedence to messageType prop over MSH segment', () => {
+      const segments: SegmentDto[] = [
+        {
+          id: 'msh-1',
+          name: 'MSH',
+          fields: [
+            { position: 1, value: '|', isEditable: false, components: [] },
+            { position: 2, value: '^~\\&', isEditable: false, components: [] },
+            {
+              position: 9,
+              value: 'ADT^A01',
+              isEditable: true,
+              components: [
+                { position: 1, value: 'ADT', subComponents: [] },
+                { position: 2, value: 'A01', subComponents: [] },
+              ],
+            },
+          ],
+        },
+      ];
+      const onUpdate = vi.fn();
+
+      render(<MessageEditor segments={segments} onUpdate={onUpdate} messageType="ORU^R01" />);
+
+      // Should show messageType prop, not MSH-9
+      expect(screen.getByText(/ORU\^R01/)).toBeInTheDocument();
+      expect(screen.queryByText(/ADT\^A01/)).not.toBeInTheDocument();
+    });
   });
 });

@@ -27,10 +27,7 @@ export const VariablesOnlyView: React.FC<VariablesOnlyViewProps> = ({
   }
 
   return (
-    <div
-      className="space-y-3 p-4"
-      data-testid="variables-only-view"
-    >
+    <div className="space-y-3 p-4" data-testid="variables-only-view">
       {uniqueVariables.map((variable, index) => (
         <VariableInput
           key={variable.variableId}
@@ -39,6 +36,7 @@ export const VariablesOnlyView: React.FC<VariablesOnlyViewProps> = ({
           value={variableValues[variable.variableId] || ''}
           onChange={(value) => onVariableChange(variable.variableId, value)}
           fieldPositions={variable.fieldPositions}
+          fieldNames={variable.fieldNames}
           occurrenceCount={variable.occurrenceCount}
           autoFocus={focusFirst && index === 0}
         />

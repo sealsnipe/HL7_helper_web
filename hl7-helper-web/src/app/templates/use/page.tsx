@@ -121,10 +121,18 @@ export default function UseTemplatePage() {
     return applyVariableEditability(segments);
   }, [currentTemplateContent]);
 
-  // Extract unique variables from parsed segments
+  // Get selected template's message type for field name lookup
+  const selectedMessageType = useMemo(() => {
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    if (!template?.messageType) return undefined;
+    // Convert "ADT-A01" to "ADT^A01" for definition lookup
+    return template.messageType.replace('-', '^');
+  }, [templates, selectedTemplateId]);
+
+  // Extract unique variables from parsed segments with field names
   const uniqueVariables: UniqueVariable[] = useMemo(() => {
-    return extractUniqueVariablesWithMetadata(parsedSegments);
-  }, [parsedSegments]);
+    return extractUniqueVariablesWithMetadata(parsedSegments, selectedMessageType);
+  }, [parsedSegments, selectedMessageType]);
 
   // Create initial variable values (placeholder -> placeholder)
   const createInitialVariableValues = useCallback((): Record<string, string> => {

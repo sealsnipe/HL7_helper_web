@@ -1,4 +1,4 @@
-import { SegmentDto, FieldDto } from '@/types';
+import { SegmentDto, FieldDto, Hl7Definition } from '@/types';
 import {
   SerializationInstance,
   UniqueVariable,
@@ -6,17 +6,18 @@ import {
   createInstanceId,
 } from '@/types/serialization';
 import { generateHl7Message } from './hl7Generator';
+import { loadDefinition, getFieldNameFromPosition } from './definitionLoader';
 
 /**
  * Get the next available instance number based on existing instances
  */
 export function getNextInstanceNumber(instances: SerializationInstance[]): number {
   const numbers = instances
-    .map(inst => {
+    .map((inst) => {
       const match = inst.name.match(/^Instance (\d+)/);
       return match ? parseInt(match[1], 10) : 0;
     })
-    .filter(n => n > 0);
+    .filter((n) => n > 0);
 
   if (numbers.length === 0) return 1;
   return Math.max(...numbers) + 1;
@@ -92,7 +93,7 @@ function substituteVariablesInFields(
   fields: FieldDto[],
   variableValues: Record<string, string>
 ): FieldDto[] {
-  return fields.map(field => {
+  return fields.map((field) => {
     let newValue = field.value;
     let newComponents = field.components;
 
@@ -105,13 +106,13 @@ function substituteVariablesInFields(
     }
 
     // Handle repetitions
-    const newRepetitions = field.repetitions?.map(rep => {
+    const newRepetitions = field.repetitions?.map((rep) => {
       if (rep.variableId && variableValues[rep.variableId] !== undefined) {
         return {
           ...rep,
           value: variableValues[rep.variableId],
           // Clear components for repetitions as well
-          components: []
+          components: [],
         };
       }
       return rep;
@@ -134,7 +135,7 @@ export function computeInstanceOutput(
   parsedSegments: SegmentDto[]
 ): InstanceOutput {
   // Deep copy segments and substitute variables
-  const substitutedSegments: SegmentDto[] = parsedSegments.map(segment => ({
+  const substitutedSegments: SegmentDto[] = parsedSegments.map((segment) => ({
     ...segment,
     fields: substituteVariablesInFields(segment.fields, instance.variableValues),
   }));
@@ -155,8 +156,17 @@ export function computeInstanceOutput(
 
 /**
  * Extract unique variables with metadata from parsed segments
+ * @param segments - Parsed HL7 segments
+ * @param messageType - Optional message type (e.g., "ADT^A01") for loading field definitions
+ * @returns Array of unique variables with their metadata including field names
  */
-export function extractUniqueVariablesWithMetadata(segments: SegmentDto[]): UniqueVariable[] {
+export function extractUniqueVariablesWithMetadata(
+  segments: SegmentDto[],
+  messageType?: string
+): UniqueVariable[] {
+  // Load definition if messageType is provided
+  const definition: Hl7Definition | null = messageType ? loadDefinition(messageType) : null;
+
   const variableMap = new Map<string, UniqueVariable>();
 
   const processField = (field: FieldDto, segmentName: string) => {
@@ -168,19 +178,24 @@ export function extractUniqueVariablesWithMetadata(segments: SegmentDto[]): Uniq
         existing.occurrenceCount++;
         if (!existing.fieldPositions.includes(fieldPosition)) {
           existing.fieldPositions.push(fieldPosition);
+          // Add corresponding field name
+          const fieldName = getFieldNameFromPosition(definition, fieldPosition);
+          existing.fieldNames.push(fieldName);
         }
       } else {
+        const fieldName = getFieldNameFromPosition(definition, fieldPosition);
         variableMap.set(field.variableId, {
           variableId: field.variableId,
           groupId: field.variableGroupId,
           occurrenceCount: 1,
           fieldPositions: [fieldPosition],
+          fieldNames: [fieldName],
         });
       }
     }
 
     // Process repetitions
-    field.repetitions?.forEach(rep => {
+    field.repetitions?.forEach((rep) => {
       if (rep.variableId) {
         const existing = variableMap.get(rep.variableId);
         const fieldPosition = `${segmentName}-${field.position}`;
@@ -189,13 +204,17 @@ export function extractUniqueVariablesWithMetadata(segments: SegmentDto[]): Uniq
           existing.occurrenceCount++;
           if (!existing.fieldPositions.includes(fieldPosition)) {
             existing.fieldPositions.push(fieldPosition);
+            const fieldName = getFieldNameFromPosition(definition, fieldPosition);
+            existing.fieldNames.push(fieldName);
           }
         } else {
+          const fieldName = getFieldNameFromPosition(definition, fieldPosition);
           variableMap.set(rep.variableId, {
             variableId: rep.variableId,
             groupId: rep.variableGroupId,
             occurrenceCount: 1,
             fieldPositions: [fieldPosition],
+            fieldNames: [fieldName],
           });
         }
       }
@@ -225,7 +244,5 @@ export function extractUniqueVariablesWithMetadata(segments: SegmentDto[]): Uniq
  * NO comments (HL7 doesn't support them)
  */
 export function formatAllOutputsForCopy(outputs: InstanceOutput[]): string {
-  return outputs
-    .map(output => output.serializedHl7)
-    .join('\n\n');
+  return outputs.map((output) => output.serializedHl7).join('\n\n');
 }
