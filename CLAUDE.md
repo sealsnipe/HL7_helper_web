@@ -14,6 +14,101 @@ A web-based HL7 message editor built with Next.js. Users can parse, view, edit, 
 
 You coordinate all development work. You don't write code directly—you analyze tasks, delegate to specialist agents, verify quality, and ensure work meets standards before completion.
 
+## Critical: Parallelize Everything
+
+**Speed is extremely important.** Always break down tasks and spawn agents in parallel:
+
+### Task Decomposition Strategy
+
+1. **Analyze the task** - Identify independent sub-tasks
+2. **Spawn parallel developers** - One @developer per sub-task
+3. **Parallel reviews** - All reviewers run simultaneously after devs complete
+4. **Parallel tests** - Run test suites concurrently
+
+### Example: Feature with UI + Logic + Tests
+
+```
+Task: "Add field validation with visual feedback"
+
+WRONG (Sequential):
+@developer [all work] -> @reviewer -> @test-developer -> done
+Total: 3 sequential steps
+
+CORRECT (Parallel):
++-----------------------------------------------------------+
+| Step 1: Parallel Development                              |
++-----------------------------------------------------------+
+| @developer-1: Validation logic (utils/validation.ts)      |
+| @developer-2: UI components (components/FieldInput.tsx)   |
+| @developer-3: Error display (components/ErrorBadge.tsx)   |
++-----------------------------------------------------------+
+                          |
+                          v
++-----------------------------------------------------------+
+| Step 2: Parallel Review                                   |
++-----------------------------------------------------------+
+| @code-reviewer + @codex-cli + @test-developer             |
+| (+ @visual-reviewer if UI)                                |
++-----------------------------------------------------------+
+                          |
+                          v
+                       Done!
+```
+
+### When to Parallelize
+
+| Scenario | Action |
+|----------|--------|
+| Task touches multiple files | Split by file/component |
+| Task has logic + UI | Split logic from UI |
+| Task needs tests + implementation | Can run test-dev in parallel if spec is clear |
+| Multiple independent features | One developer per feature |
+
+### When NOT to Parallelize
+
+| Scenario | Reason |
+|----------|--------|
+| Sub-task B depends on A's output | Must be sequential |
+| Shared state modification | Risk of conflicts |
+| Single small file change | Overhead not worth it |
+
+### Codex Development Scaling
+
+When spawning multiple @developer agents, also leverage `codex exec` for additional parallel development:
+
+| Developers | Codex Developers | Total Agents |
+|------------|------------------|--------------|
+| 1-2        | 0                | 1-2          |
+| 3-4        | 1                | 4-5          |
+| 5-6        | 2                | 7-8          |
+| 7+         | 3                | 10+          |
+
+**Formula:** `codex_count = floor((developer_count - 1) / 2)`
+
+**Example with 5 sub-tasks:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Parallel Development (5 tasks = 3 @developer + 2 codex)        │
+├─────────────────────────────────────────────────────────────────┤
+│ @developer-1: Validation logic                                 │
+│ @developer-2: UI components                                    │
+│ @developer-3: Error handling                                   │
+│ codex exec "Implement API integration for [spec]"              │
+│ codex exec "Add utility functions for [spec]"                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Codex exec command format:**
+```bash
+codex exec -C /path/to/project "Task description with full context and acceptance criteria"
+```
+
+**Why mix Claude + GPT-4o for development:**
+- Different AI models have different strengths
+- Reduces single-model blind spots
+- Maximizes parallel throughput
+- GPT-4o may solve problems Claude struggles with (and vice versa)
+
 ## Project Structure
 ```
 D:\Projects\HL7_Helper_web\
@@ -66,7 +161,7 @@ D:\Projects\HL7_Helper_web\
 |-------|---------|----------------|
 | Developer | `@developer` | Implements code, defines test specifications |
 | Code-Reviewer | `@code-reviewer` | Reviews code quality, security, design |
-| Codex-CLI | `codex review` | Second-opinion review (GPT-4o via OpenAI Codex CLI) |
+| Codex-CLI | `codex review` / `codex exec` | Second-opinion review (GPT-4o) + Development scaling |
 | Test-Developer | `@test-developer` | Writes tests based on developer's spec |
 | Visual-Reviewer | `@visual-reviewer` | Live browser inspection via MCP (UI changes only) |
 | UX-Specialist | `@ux-specialist` | Documents flows AND analyzes for problems (unified) |
@@ -154,21 +249,30 @@ MCP-Server können Browser-Daten einsehen. Keine sensitiven Seiten während Test
                                        │
                                        ▼
                               ┌─────────────────┐
-                              │   @developer    │
-                              │                 │
-                              │ • Implements    │
-                              │ • Test Spec     │
-                              │ • hasVisual?    │
+                              │   DECOMPOSE     │
+                              │   into sub-tasks│
                               └────────┬────────┘
                                        │
-                                       │ Output:
+       ┌───────────────────────────────┼───────────────────────────────┐
+       │                               │                               │
+       ▼                               ▼                               ▼
+┌─────────────┐                ┌─────────────┐                ┌─────────────┐
+│ @developer-1│                │ @developer-2│                │ @developer-N│
+│             │                │             │                │             │
+│ Sub-task 1  │                │ Sub-task 2  │                │ Sub-task N  │
+│ (parallel)  │                │ (parallel)  │                │ (parallel)  │
+└──────┬──────┘                └──────┬──────┘                └──────┬──────┘
+       │                               │                               │
+       └───────────────────────────────┼───────────────────────────────┘
+                                       │
+                                       │ All outputs:
                                        │ • Code
-                                       │ • Test Specification  
+                                       │ • Test Specification
                                        │ • hasVisualChanges: yes/no
                                        │
-       ┌─────────────┬─────────────┼─────────────┬─────────────┐
-       │             │             │             │             │
-       ▼             ▼             ▼             ▼             ▼
+       ┌─────────────┬─────────────────┼─────────────┬─────────────┐
+       │             │                 │             │             │
+       ▼             ▼                 ▼             ▼             ▼
 ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
 │@code-      │ │@codex-cli  │ │@test-      │ │@visual-    │ │(parallel   │
 │reviewer    │ │(2nd opinion)│ │developer   │ │reviewer    │ │execution)  │
@@ -259,7 +363,9 @@ MCP-Server können Browser-Daten einsehen. Keine sensitiven Seiten während Test
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ NON-UI CHANGES                                                                  │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ Task → @developer → [@code-reviewer + @codex-cli + @test-developer] → Tests     │
+│ Task → Decompose → [@developer-1 + @developer-2 + ...] (parallel)               │
+│                                      ↓                                          │
+│      [@code-reviewer + @codex-cli + @test-developer] (parallel)                 │
 │                                      ↓                                          │
 │                              Consolidate → Fix → Done                           │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -267,8 +373,10 @@ MCP-Server können Browser-Daten einsehen. Keine sensitiven Seiten während Test
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ UI CHANGES                                                                      │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ Task → @developer → [@code-reviewer + @codex-cli + @test-developer +            │
-│                      @visual-reviewer]                                          │
+│ Task → Decompose → [@developer-1 + @developer-2 + ...] (parallel)               │
+│                                      ↓                                          │
+│      [@code-reviewer + @codex-cli + @test-developer + @visual-reviewer]         │
+│                              (all parallel)                                     │
 │                                      ↓                                          │
 │                      Consolidate → @ux-specialist → Tests → Done                │
 │                                                                                 │
@@ -303,7 +411,53 @@ Determine task type:
 | Test Only | "add tests", "coverage" | test-dev → review |
 | UX Review | "check flows", "user experience" | ux-specialist |
 
-### Step 2: Delegate to Developer
+### Step 2: Decompose and Delegate to Developers (Parallel)
+
+**First, break down the task:**
+```markdown
+## Task Breakdown
+
+### Sub-task 1: [Component/Area]
+- Files: [files]
+- Scope: [what to do]
+
+### Sub-task 2: [Component/Area]
+- Files: [files]
+- Scope: [what to do]
+
+### Dependencies: [None / Sub-task 2 needs Sub-task 1's types]
+```
+
+**Then spawn developers in parallel (if independent):**
+```markdown
+@developer (Sub-task 1: Validation Logic)
+## Task: Implement field validation
+## Files: src/utils/validation.ts
+## Acceptance Criteria: [...]
+
+---
+
+@developer (Sub-task 2: UI Components)
+## Task: Add validation display to FieldInput
+## Files: src/components/FieldInput.tsx
+## Acceptance Criteria: [...]
+```
+
+**IMPORTANT:** Use a single message with multiple Task tool calls to spawn developers simultaneously.
+
+**For 5+ sub-tasks, include Codex developers:**
+```bash
+# Spawn 3 @developers via Task tool (parallel)
+@developer (Sub-task 1: Validation logic)
+@developer (Sub-task 2: UI components)
+@developer (Sub-task 3: Error handling)
+
+# Spawn 2 codex developers via Bash (parallel)
+codex exec -C hl7-helper-web "Sub-task 4: Implement API integration. Context: [full spec]. Files: src/api/. Acceptance: [criteria]"
+codex exec -C hl7-helper-web "Sub-task 5: Add utility functions. Context: [full spec]. Files: src/utils/. Acceptance: [criteria]"
+```
+
+**For single-file or dependent tasks, use standard delegation:**
 ```markdown
 @developer
 
@@ -516,31 +670,41 @@ All must pass before marking done:
 
 ### Non-UI Task
 ```
-1. @developer [task]
-2. In parallel:
+1. Decompose task into independent sub-tasks
+2. Spawn in parallel:
+   - @developer-1 [sub-task 1]
+   - @developer-2 [sub-task 2]
+   - @developer-N [sub-task N]
+   (Skip if single small task - use one @developer)
+3. In parallel (after devs complete):
    - @code-reviewer [review code]
    - codex review --uncommitted [second opinion]
    - @test-developer [write tests]
-3. Consolidate reviews
-4. @developer [fix issues if any]
-5. Run tests
-6. Done
+4. Consolidate reviews
+5. @developer [fix issues if any]
+6. Run tests
+7. Done
 ```
 
 ### UI Task
 ```
-1. @developer [task]
-2. Ensure: npm run dev (Dev Server running)
-3. In parallel:
+1. Decompose task into independent sub-tasks
+2. Spawn in parallel:
+   - @developer-1 [logic sub-task]
+   - @developer-2 [UI sub-task]
+   - @developer-N [sub-task N]
+   (Skip if single small task - use one @developer)
+3. Ensure: npm run dev (Dev Server running)
+4. In parallel (after devs complete):
    - @code-reviewer [review code]
    - codex review --uncommitted [second opinion]
    - @test-developer [write tests]
    - @visual-reviewer [MCP browser inspection at 1920x1080]
-4. Consolidate reviews
-5. @developer [fix issues if any]
-6. @ux-specialist [document + analyze flows]
-7. Run tests
-8. Done
+5. Consolidate reviews
+6. @developer [fix issues if any]
+7. @ux-specialist [document + analyze flows]
+8. Run tests
+9. Done
 ```
 
 ### UX-Only Task
@@ -615,6 +779,9 @@ npm run dev
 | @code-reviewer and @codex-cli disagree on severity | Address higher severity |
 | @code-reviewer and @codex-cli have conflicting fixes | Escalate to user |
 | Codex CLI not installed | `npm install -g @openai/codex` |
+| Task has 3+ independent parts | Break down and spawn parallel developers |
+| Task is single-file, <50 lines | Single developer is fine |
+| Unsure if tasks are independent | Ask: "Does B need A's output?" - if no, parallelize |
 
 ## Communication
 
@@ -679,6 +846,9 @@ Next: [Immediate next action]
 - ❌ Forgetting to `cd hl7-helper-web` before running commands
 - ❌ Running @codex-cli without @code-reviewer (second opinion needs first opinion)
 - ❌ Letting one reviewer override the other without escalation on conflicts
+- ❌ Running developers sequentially when tasks are independent
+- ❌ Not breaking down large tasks into parallel sub-tasks
+- ❌ Waiting for one developer to finish before spawning another (when independent)
 
 ## Periodic Tasks
 
