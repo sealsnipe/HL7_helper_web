@@ -1,7 +1,14 @@
+import React from 'react';
 import { FieldDto, SegmentDto } from '@/types';
 
 // Regex pattern to match HELPERVARIABLE with optional number (1-999)
-const VARIABLE_REGEX = /HELPERVARIABLE(\d{1,3})?/;
+// Word boundaries (\b) ensure we don't match partial strings like XHELPERVARIABLE or HELPERVARIABLEEXTRA
+// Note: Uses [1-9]\d{0,2} to match 1-999 (no leading zeros) or no digits for standalone
+const VARIABLE_REGEX = /\bHELPERVARIABLE(?:[1-9]\d{0,2})?\b/;
+
+// Same pattern but with capturing group for split operations (needs global flag)
+// When used with split(), captured groups are included in the result array
+const VARIABLE_SPLIT_REGEX = /(\bHELPERVARIABLE(?:[1-9]\d{0,2})?\b)/g;
 
 /**
  * Extract variable name from a value (e.g., "HELPERVARIABLE1" or "HELPERVARIABLE")
@@ -19,10 +26,10 @@ export function extractVariableName(value: string): string | null {
  */
 export function extractVariableGroupId(variableName: string): number | null {
   if (!variableName) return null;
-  const match = variableName.match(/HELPERVARIABLE(\d{1,3})/);
+  // Match HELPERVARIABLE followed by 1-999 (no leading zeros)
+  const match = variableName.match(/HELPERVARIABLE([1-9]\d{0,2})/);
   if (match && match[1]) {
-    const num = parseInt(match[1], 10);
-    return num >= 1 && num <= 999 ? num : null;
+    return parseInt(match[1], 10);
   }
   return null;
 }
@@ -40,11 +47,14 @@ export function containsAnyVariable(value: string): boolean {
  */
 export function fieldContainsVariable(field: FieldDto): boolean {
   if (containsAnyVariable(field.value)) return true;
-  if (field.components?.some(c =>
-    containsAnyVariable(c.value) ||
-    c.subComponents?.some(s => containsAnyVariable(s.value))
-  )) return true;
-  if (field.repetitions?.some(r => fieldContainsVariable(r))) return true;
+  if (
+    field.components?.some(
+      (c) =>
+        containsAnyVariable(c.value) || c.subComponents?.some((s) => containsAnyVariable(s.value))
+    )
+  )
+    return true;
+  if (field.repetitions?.some((r) => fieldContainsVariable(r))) return true;
   return false;
 }
 
@@ -52,7 +62,8 @@ export function fieldContainsVariable(field: FieldDto): boolean {
  * Count the number of HELPERVARIABLE occurrences in content (any type)
  */
 export function getVariableCount(content: string): number {
-  return (content.match(/HELPERVARIABLE(\d{1,3})?/g) || []).length;
+  // Use global version of VARIABLE_REGEX pattern for counting
+  return (content.match(/\bHELPERVARIABLE(?:[1-9]\d{0,2})?\b/g) || []).length;
 }
 
 /**
@@ -67,11 +78,11 @@ function applyVariableToField(field: FieldDto): FieldDto {
     isEditable: fieldContainsVariable(field),
     variableId: variableId ?? undefined,
     variableGroupId: variableGroupId ?? undefined,
-    components: field.components?.map(c => ({
+    components: field.components?.map((c) => ({
       ...c,
       // Components inherit editability from parent field check
     })),
-    repetitions: field.repetitions?.map(r => applyVariableToField(r)),
+    repetitions: field.repetitions?.map((r) => applyVariableToField(r)),
   };
 }
 
@@ -80,9 +91,9 @@ function applyVariableToField(field: FieldDto): FieldDto {
  * Also adds variableId and variableGroupId metadata for linked variable support
  */
 export function applyVariableEditability(segments: SegmentDto[]): SegmentDto[] {
-  return segments.map(seg => ({
+  return segments.map((seg) => ({
     ...seg,
-    fields: seg.fields.map(f => applyVariableToField(f)),
+    fields: seg.fields.map((f) => applyVariableToField(f)),
   }));
 }
 
@@ -91,11 +102,11 @@ export function applyVariableEditability(segments: SegmentDto[]): SegmentDto[] {
  */
 export function filterSegmentsForVariables(segments: SegmentDto[]): SegmentDto[] {
   return segments
-    .map(seg => ({
+    .map((seg) => ({
       ...seg,
-      fields: seg.fields.filter(f => fieldContainsVariable(f)),
+      fields: seg.fields.filter((f) => fieldContainsVariable(f)),
     }))
-    .filter(seg => seg.fields.length > 0);
+    .filter((seg) => seg.fields.length > 0);
 }
 
 /**
@@ -113,11 +124,11 @@ export function extractUniqueVariables(segments: SegmentDto[]): Map<string, stri
       }
     }
     // Check repetitions
-    field.repetitions?.forEach(r => processField(r));
+    field.repetitions?.forEach((r) => processField(r));
   }
 
-  segments.forEach(seg => {
-    seg.fields.forEach(f => processField(f));
+  segments.forEach((seg) => {
+    seg.fields.forEach((f) => processField(f));
   });
 
   return variables;
@@ -132,13 +143,13 @@ export function getVariableGroupColor(groupId: number | undefined): string {
     return 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20';
   }
   const colors = [
-    'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/20',      // Group 1
-    'ring-2 ring-green-400 bg-green-50 dark:bg-green-900/20',   // Group 2
+    'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/20', // Group 1
+    'ring-2 ring-green-400 bg-green-50 dark:bg-green-900/20', // Group 2
     'ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/20', // Group 3
-    'ring-2 ring-pink-400 bg-pink-50 dark:bg-pink-900/20',      // Group 4
-    'ring-2 ring-cyan-400 bg-cyan-50 dark:bg-cyan-900/20',      // Group 5
+    'ring-2 ring-pink-400 bg-pink-50 dark:bg-pink-900/20', // Group 4
+    'ring-2 ring-cyan-400 bg-cyan-50 dark:bg-cyan-900/20', // Group 5
     'ring-2 ring-orange-400 bg-orange-50 dark:bg-orange-900/20', // Group 6
-    'ring-2 ring-teal-400 bg-teal-50 dark:bg-teal-900/20',      // Group 7
+    'ring-2 ring-teal-400 bg-teal-50 dark:bg-teal-900/20', // Group 7
     'ring-2 ring-indigo-400 bg-indigo-50 dark:bg-indigo-900/20', // Group 8
   ];
   return colors[(groupId - 1) % colors.length];
@@ -162,4 +173,39 @@ export function getVariableBadgeColor(groupId: number | undefined): string {
     'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
   ];
   return colors[(groupId - 1) % colors.length];
+}
+
+/**
+ * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors.
+ * Renders highlighted badges for variable placeholders in React.
+ * Used for read-only display (not for editable textareas to avoid cursor issues).
+ *
+ * @param text - The HL7 text to highlight
+ * @returns React nodes with highlighted variable badges, or null if text is empty
+ */
+export function highlightVariablesInText(text: string): React.ReactNode {
+  if (!text) return null;
+
+  // Normalize line endings: HL7 uses \r but CSS whitespace-pre-wrap needs \n for line breaks
+  const normalizedText = text.replace(/\r\n?/g, '\n');
+
+  // Split on any HELPERVARIABLE with optional number (1-999)
+  // Uses VARIABLE_SPLIT_REGEX for consistency with VARIABLE_REGEX
+  const parts = normalizedText.split(VARIABLE_SPLIT_REGEX);
+
+  return parts.map((part, index) => {
+    // Check if this part is a variable (already filtered by split)
+    const match = part.match(/^HELPERVARIABLE(?:([1-9]\d{0,2}))?$/);
+    if (match) {
+      const groupId = match[1] ? parseInt(match[1], 10) : undefined;
+      const colorClass = getVariableBadgeColor(groupId);
+
+      return React.createElement(
+        'span',
+        { key: index, className: `${colorClass} px-1 rounded font-bold` },
+        part
+      );
+    }
+    return part;
+  });
 }

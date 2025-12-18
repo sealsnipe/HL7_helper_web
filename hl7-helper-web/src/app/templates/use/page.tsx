@@ -9,37 +9,12 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { VariablesOnlyView } from '@/components/serialization/VariablesOnlyView';
 import { parseHl7Message } from '@/utils/hl7Parser';
 import { loadTemplatesFromStorage } from '@/utils/templateValidation';
-import { applyVariableEditability, getVariableBadgeColor } from '@/utils/templateHelpers';
+import { applyVariableEditability, highlightVariablesInText } from '@/utils/templateHelpers';
 import {
   extractUniqueVariablesWithMetadata,
   computeInstanceOutput,
 } from '@/utils/serializationHelpers';
 import { runMigrations } from '@/services/persistence/migrations';
-
-/**
- * Highlight HELPERVARIABLE placeholders in raw HL7 text
- * Supports HELPERVARIABLE (basic) and HELPERVARIABLE1-999 (numbered groups)
- */
-const highlightVariablesInText = (text: string): React.ReactNode => {
-  if (!text) return null;
-
-  // Match HELPERVARIABLE followed by optional 1-3 digit number (1-999)
-  // The negative lookahead (?!\d) ensures plain HELPERVARIABLE doesn't match partial numbers
-  const parts = text.split(/(HELPERVARIABLE[1-9]\d{0,2}|HELPERVARIABLE(?!\d))/g);
-  return parts.map((part, index) => {
-    const match = part.match(/^HELPERVARIABLE([1-9]\d{0,2})?$/);
-    if (match) {
-      const groupId = match[1] ? parseInt(match[1], 10) : undefined;
-      const colorClass = getVariableBadgeColor(groupId);
-      return (
-        <span key={index} className={`${colorClass} px-1 rounded font-bold`}>
-          {part}
-        </span>
-      );
-    }
-    return part;
-  });
-};
 
 /**
  * Extract message type from HL7 content (MSH-9 field)

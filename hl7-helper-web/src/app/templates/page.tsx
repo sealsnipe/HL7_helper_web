@@ -13,8 +13,8 @@ import { loadTemplatesFromStorage, saveTemplatesToStorage } from '@/utils/templa
 import {
   fieldContainsVariable,
   getVariableCount,
-  getVariableBadgeColor,
   applyVariableEditability,
+  highlightVariablesInText,
 } from '@/utils/templateHelpers';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DataManagement } from '@/components/persistence';
@@ -151,36 +151,6 @@ function TemplateContent({ initialTemplates }: { initialTemplates: Template[] })
   // This prevents the race condition where handleEditorUpdate sets segments,
   // but the useEffect immediately overwrites them by re-parsing editContent
   const skipNextParse = React.useRef(false);
-
-  /**
-   * Highlight HELPERVARIABLE placeholders in raw HL7 text with group-specific colors
-   * Used for read-only display (not for editable textareas to avoid cursor issues)
-   *
-   * @param text - The HL7 text to highlight
-   */
-  const highlightVariablesInText = (text: string): React.ReactNode => {
-    if (!text) return null;
-
-    // Normalize line endings: HL7 uses \r but CSS whitespace-pre-wrap needs \n for line breaks
-    const normalizedText = text.replace(/\r\n?/g, '\n');
-
-    // Split on any HELPERVARIABLE with optional number (1-999)
-    const parts = normalizedText.split(/(HELPERVARIABLE[1-9]\d{0,2}|HELPERVARIABLE(?!\d))/g);
-    return parts.map((part, index) => {
-      const match = part.match(/^HELPERVARIABLE([1-9]\d{0,2})?$/);
-      if (match) {
-        const groupId = match[1] ? parseInt(match[1], 10) : undefined;
-        const colorClass = getVariableBadgeColor(groupId);
-
-        return (
-          <span key={index} className={`${colorClass} px-1 rounded font-bold`}>
-            {part}
-          </span>
-        );
-      }
-      return part;
-    });
-  };
 
   // Parse content when it changes (for expanded view)
   // Apply variable editability to set variableId and variableGroupId for badge display
